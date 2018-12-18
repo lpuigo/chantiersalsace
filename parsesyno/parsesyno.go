@@ -55,18 +55,19 @@ func (s *Syno) Parse() error {
 	if !nextPos.IsValid() {
 		return fmt.Errorf("could not find first Site Position's")
 	}
-	fmt.Printf("next pos : %v\n", nextPos)
 	var nextSite *site.Site
 	for {
 		nextPos, nextSite = s.GetSite(nextPos)
-		fmt.Printf("next pos : %v\n", nextPos)
 		s.Sro.Children = append(s.Sro.Children, nextSite)
 		nextPos = s.GetSiblingSitePos(nextPos)
-		fmt.Printf("sibling pos : %v\n", nextPos)
 		if !nextPos.IsValid() {
 			break
 		}
 	}
+
+	s.printBorderInfo(Position{187, 7})
+	s.printBorderInfo(Position{188, 7})
+
 	return nil
 }
 
@@ -107,18 +108,23 @@ func (s Syno) GetSiblingSitePos(curPos Position) Position {
 	for {
 		cell := s.synoSheet.Cell(curPos.row, curPos.col)
 		border := cell.GetStyle().Border
-		fmt.Printf("border at %v : %v\n", curPos, border)
 		if border.Left == "none" || border.Left == "" {
 			return Position{} // no other sibling here, exit with invalid pos
 		}
 		if border.Bottom != "" {
 			return curPos // found something
 		}
-		curPos.row += 8
+		curPos.row += 1
 		if curPos.row >= s.nbRows {
 			return Position{} // end of sheet reached, exit with invalid pos
 		}
 	}
+}
+
+func (s Syno) printBorderInfo(pos Position) {
+	cell := s.synoSheet.Cell(pos.row, pos.col)
+	border := cell.GetStyle().Border
+	fmt.Printf("Pos %v: l:'%s' r:'%s' t:'%s' b:'%s' (%s)\n", pos, border.Left, border.Right, border.Top, border.Bottom, cell.Value)
 }
 
 // GetFirstSite returns the first site found starting from given row
@@ -148,7 +154,7 @@ func (s Syno) GetSite(curpos Position) (next Position, newSite *site.Site) {
 		Children:  []*site.Site{},
 	}
 
-	fmt.Printf("found %s %s\n", newSite.Id, newSite.Type)
+	fmt.Printf("found %s %s (ref %s, color %s) pos %v\n", newSite.Id, newSite.Type, newSite.Ref, newSite.Color, spos)
 	//TODO Seek for children
 	next = Position{curpos.row + 8, curpos.col}
 	return
