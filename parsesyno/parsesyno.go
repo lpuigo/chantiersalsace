@@ -119,6 +119,11 @@ func (s Syno) HasBorder(pos Position) (left, bottom bool) {
 	cell := s.synoSheet.Cell(pos.row, pos.col)
 	border := cell.GetStyle().Border
 	left = border.Left != "" && border.Left != "none"
+	if !left {
+		cell2 := s.synoSheet.Cell(pos.row, pos.col-1)
+		border2 := cell2.GetStyle().Border
+		left = border2.Right != "" && border2.Right != "none"
+	}
 	bottom = border.Bottom != "" && border.Bottom != "none"
 	if bottom {
 		return
@@ -135,37 +140,78 @@ func (s Syno) printBorderInfo(pos Position) {
 	fmt.Printf("Pos %v: l:'%s' r:'%s' t:'%s' b:'%s' (%s)\n", pos, border.Left, border.Right, border.Top, border.Bottom, cell.Value)
 }
 
-// GetFirstSite returns the first site found starting from given row
-func (s Syno) GetSite(curpos Position) (next Position, newSite *site.Site) {
+// GetSite returns the site found from current Position, starting sibling position (under the given curPos), and starting Child Position
+func (s Syno) GetSite(curpos Position) (nextSibling Position, newSite *site.Site) {
 	pos := curpos
 	// seek (to the right) the site ref
 	for s.synoSheet.Cell(pos.row, pos.col).Value == "" && pos.col < s.nbCols {
 		pos.col++
+	}
+	newSite = &site.Site{
+		FiberIn:  s.synoSheet.Cell(pos.row+1, pos.col).Value,
+		Lenght:   s.synoSheet.Cell(pos.row+2, pos.col).Value,
+		Parent:   nil,
+		Children: []*site.Site{},
 	}
 	// seek (to the right) the site info
 	spos := Position{pos.row, pos.col + 1}
 	for s.synoSheet.Cell(spos.row, spos.col).Value == "" && spos.col < s.nbCols {
 		spos.col++
 	}
-	newSite = &site.Site{
-		Type:      s.synoSheet.Cell(pos.row-3, spos.col).Value,
-		Id:        s.synoSheet.Cell(pos.row-2, spos.col).Value,
-		BPEType:   s.synoSheet.Cell(pos.row-1, spos.col).Value,
-		Operation: s.synoSheet.Cell(pos.row, spos.col).Value,
-		Ref:       s.synoSheet.Cell(pos.row+1, spos.col).Value,
-		Ref2:      s.synoSheet.Cell(pos.row+2, spos.col).Value,
-		FiberOut:  s.synoSheet.Cell(pos.row+3, spos.col).Value,
-		FiberIn:   s.synoSheet.Cell(pos.row+1, pos.col).Value,
-		Lenght:    s.synoSheet.Cell(pos.row+2, pos.col).Value,
-		Color:     s.synoSheet.Cell(pos.row-3, spos.col).GetStyle().Fill.FgColor,
-		Parent:    nil,
-		Children:  []*site.Site{},
+	childPos := s.getSiteBlock(spos, newSite)
+
+	fmt.Printf("found pos %v %s %s (ref %s, color %s), child pos %v\n", pos, newSite.Id, newSite.Type, newSite.Ref, newSite.Color, childPos)
+	//TODO Seek for children
+	nextSibling = Position{curpos.row + 6, curpos.col}
+	return
+}
+
+func (s Syno) getSiteBlock(pos Position, curSite *site.Site) (nextChild Position) {
+	// seek for first row of site block
+	for {
+		left, bottom := s.HasBorder(Position{pos.row - 1, pos.col})
+		if !left && bottom {
+			break
+		}
+		pos.row--
+	}
+	curSite.Type = s.synoSheet.Cell(pos.row, pos.col).Value
+	curSite.Id = s.synoSheet.Cell(pos.row+1, pos.col).Value
+	curSite.BPEType = s.synoSheet.Cell(pos.row+2, pos.col).Value
+	curSite.Operation = s.synoSheet.Cell(pos.row+3, pos.col).Value
+	curSite.Ref = s.synoSheet.Cell(pos.row+4, pos.col).Value
+	curSite.Ref2 = s.synoSheet.Cell(pos.row+5, pos.col).Value
+	curSite.FiberOut = s.synoSheet.Cell(pos.row+6, pos.col).Value
+	curSite.Color = s.synoSheet.Cell(pos.row+3, pos.col).GetStyle().Fill.FgColor
+
+	// seek for upwards child
+	cpos := Position{pos.row - 1, pos.col + 1}
+	for {
+		left, bottom := s.HasBorder(cpos)
+		//fmt.Printf("\t %v l:%v b:%v\n", cpos, left, bottom)
+		if !left && bottom {
+			return cpos // found first child pos
+		}
+		if !left && !bottom {
+			break // no child up there
+		}
+		cpos.row--
 	}
 
-	fmt.Printf("found %s %s (ref %s, color %s) pos %v\n", newSite.Id, newSite.Type, newSite.Ref, newSite.Color, spos)
-	//TODO Seek for children
-	next = Position{curpos.row + 8, curpos.col}
-	return
+	// seek for child on the right
+	cpos = Position{pos.row + 2, pos.col + 1}
+	for {
+		left, bottom := s.HasBorder(cpos)
+		if left && bottom {
+			return cpos // found first child pos
+		}
+		if !left {
+			break // no child up there
+		}
+		cpos.row++
+	}
+
+	return Position{}
 }
 
 func siteCoords(p Position) Position {
