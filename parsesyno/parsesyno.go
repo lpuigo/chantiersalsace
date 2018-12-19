@@ -65,9 +65,6 @@ func (s *Syno) Parse() error {
 		}
 	}
 
-	s.printBorderInfo(Position{187, 7})
-	s.printBorderInfo(Position{188, 7})
-
 	return nil
 }
 
@@ -93,12 +90,10 @@ func (s Syno) GetFirstSitePos() Position {
 			continue
 		}
 		cell := r.Cells[SiteStartColNum]
-		border := cell.GetStyle().Border
-		if cell.Value != "" || (border.Bottom != "" && border.Bottom != "none") {
-			return Position{
-				row: rn,
-				col: SiteStartColNum,
-			}
+		pos := Position{rn, SiteStartColNum}
+		_, bottom := s.HasBorder(pos)
+		if cell.Value != "" || bottom {
+			return pos
 		}
 	}
 	return Position{}
@@ -106,12 +101,11 @@ func (s Syno) GetFirstSitePos() Position {
 
 func (s Syno) GetSiblingSitePos(curPos Position) Position {
 	for {
-		cell := s.synoSheet.Cell(curPos.row, curPos.col)
-		border := cell.GetStyle().Border
-		if border.Left == "none" || border.Left == "" {
+		left, bottom := s.HasBorder(curPos)
+		if !left {
 			return Position{} // no other sibling here, exit with invalid pos
 		}
-		if border.Bottom != "" {
+		if bottom {
 			return curPos // found something
 		}
 		curPos.row += 1
@@ -119,6 +113,20 @@ func (s Syno) GetSiblingSitePos(curPos Position) Position {
 			return Position{} // end of sheet reached, exit with invalid pos
 		}
 	}
+}
+
+func (s Syno) HasBorder(pos Position) (left, bottom bool) {
+	cell := s.synoSheet.Cell(pos.row, pos.col)
+	border := cell.GetStyle().Border
+	left = border.Left != "" && border.Left != "none"
+	bottom = border.Bottom != "" && border.Bottom != "none"
+	if bottom {
+		return
+	}
+	cell2 := s.synoSheet.Cell(pos.row+1, pos.col)
+	border2 := cell2.GetStyle().Border
+	bottom = border2.Top != "" && border2.Top != "none"
+	return
 }
 
 func (s Syno) printBorderInfo(pos Position) {
