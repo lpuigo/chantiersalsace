@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"github.com/lpuig/ewin/chantiersalsace/site"
 	"github.com/tealeg/xlsx"
+	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
 	SynoSheetName = "Syno"
 
-	SROColNum       = 4
-	SiteStartColNum = 7
+	SROMaxColNum = 4
 )
 
 type Position struct {
@@ -28,7 +29,8 @@ type Syno struct {
 	nbCols    int
 	nbRows    int
 
-	Sro site.SRO
+	nbSites int
+	Sro     site.SRO
 }
 
 func (s *Syno) Parse() error {
@@ -45,19 +47,25 @@ func (s *Syno) Parse() error {
 	s.nbCols = len(synoSheet.Cols)
 	s.nbRows = len(synoSheet.Rows)
 
+	//for i:= 59; i < 85; i++ {
+	//	s.printBorderInfo(Position{i,26})
+	//
+	//}
+
 	sroPos, sroName := s.GetSROInfo()
-	if sroPos == -1 {
+	if !sroPos.IsValid() {
 		return fmt.Errorf("could not find SRO info")
 	}
+	fmt.Printf("SRO %s found pos %v\n", sroName, sroPos)
 	s.Sro = site.NewSRO(sroName)
 
-	nextPos := s.GetFirstSitePos()
+	nextPos := s.findFirstChild(Position{sroPos.row, sroPos.col + 2})
 	if !nextPos.IsValid() {
 		return fmt.Errorf("could not find first Site Position's")
 	}
 	var nextSite *site.Site
 	for {
-		nextPos, nextSite = s.GetSite(nextPos)
+		nextPos, nextSite = s.GetSite(nextPos, s.Sro)
 		s.Sro.Children = append(s.Sro.Children, nextSite)
 		nextPos = s.GetSiblingSitePos(nextPos)
 		if !nextPos.IsValid() {
@@ -68,37 +76,48 @@ func (s *Syno) Parse() error {
 	return nil
 }
 
-// GetSROInfo returns rowNumber and Name of SRO (pos = -1 if not found)
-func (s Syno) GetSROInfo() (pos int, name string) {
+func (s Syno) WriteXLS(file string) error {
+	of, err := os.Create(file)
+	if err != nil {
+		return err
+	}
+	defer of.Close()
+
+	xlsx.SetDefaultFont(11, "Calibri")
+	oxf := xlsx.NewFile()
+	oxs, err := oxf.AddSheet(s.Sro.Name())
+	if err != nil {
+		return err
+	}
+	hs := &site.Site{}
+	hs.WriteXLSHeader(oxs)
+	for _, psite := range s.Sro.Children {
+		psite.WriteXLSRow(oxs)
+	}
+
+	return oxf.Write(of)
+}
+
+// GetSROInfo returns rowNumber and Name of SRO (position invalid if not found)
+func (s Syno) GetSROInfo() (pos Position, name string) {
 	for rn, r := range s.synoSheet.Rows {
-		if len(r.Cells) <= SROColNum {
+		if len(r.Cells) <= SROMaxColNum {
 			continue
 		}
-		val := r.Cells[SROColNum].Value
-		if val != "" {
+		for cn, c := range r.Cells {
+			val := c.Value
+			if !strings.HasPrefix(val, "SRO-") {
+				continue
+			}
 			name = val
-			pos = rn
+			pos = Position{rn, cn}
 			return
 		}
 	}
-	return -1, ""
+	return Position{}, ""
 }
 
-func (s Syno) GetFirstSitePos() Position {
-	for rn, r := range s.synoSheet.Rows {
-		if len(r.Cells) <= SiteStartColNum {
-			continue
-		}
-		cell := r.Cells[SiteStartColNum]
-		pos := Position{rn, SiteStartColNum}
-		_, bottom := s.HasBorder(pos)
-		if cell.Value != "" || bottom {
-			return pos
-		}
-	}
-	return Position{}
-}
-
+// GetSiblingSitePos returns Sibing Site Position (or invalid Position if no sibling site found)
 func (s Syno) GetSiblingSitePos(curPos Position) Position {
 	for {
 		left, bottom := s.HasBorder(curPos)
@@ -136,13 +155,15 @@ func (s Syno) HasBorder(pos Position) (left, bottom bool) {
 
 func (s Syno) printBorderInfo(pos Position) {
 	cell := s.synoSheet.Cell(pos.row, pos.col)
-	border := cell.GetStyle().Border
-	fmt.Printf("Pos %v: l:'%s' r:'%s' t:'%s' b:'%s' (%s)\n", pos, border.Left, border.Right, border.Top, border.Bottom, cell.Value)
+	style := cell.GetStyle()
+	border := style.Border
+	color := style.Fill.FgColor
+	fmt.Printf("Pos %v: l:'%s' r:'%s' t:'%s' b:'%s' val:%s (%s)\n", pos, border.Left, border.Right, border.Top, border.Bottom, cell.Value, color)
 }
 
-// GetSite returns the site found from current Position, starting sibling position (under the given curPos), and starting Child Position
-func (s Syno) GetSite(curpos Position) (nextSibling Position, newSite *site.Site) {
-	pos := curpos
+// GetSite returns the site found from current Position and starting sibling position (under the given curPos)
+func (s *Syno) GetSite(startPos Position, parent site.Ascendent) (nextSibling Position, newSite *site.Site) {
+	pos := startPos
 	// seek (to the right) the site ref
 	for s.synoSheet.Cell(pos.row, pos.col).Value == "" && pos.col < s.nbCols {
 		pos.col++
@@ -150,27 +171,45 @@ func (s Syno) GetSite(curpos Position) (nextSibling Position, newSite *site.Site
 	newSite = &site.Site{
 		FiberIn:  s.synoSheet.Cell(pos.row+1, pos.col).Value,
 		Lenght:   s.synoSheet.Cell(pos.row+2, pos.col).Value,
-		Parent:   nil,
+		Parent:   parent,
 		Children: []*site.Site{},
 	}
-	// seek (to the right) the site info
+	// seek (to the right) the block site info
 	spos := Position{pos.row, pos.col + 1}
+	//TODO detect also left border
 	for s.synoSheet.Cell(spos.row, spos.col).Value == "" && spos.col < s.nbCols {
 		spos.col++
 	}
 	childPos := s.getSiteBlock(spos, newSite)
-
-	fmt.Printf("found pos %v %s %s (ref %s, color %s), child pos %v\n", pos, newSite.Id, newSite.Type, newSite.Ref, newSite.Color, childPos)
-	//TODO Seek for children
-	nextSibling = Position{curpos.row + 6, curpos.col}
+	if childPos.IsValid() {
+		for {
+			nextSiblingPos, childSite := s.GetSite(childPos, newSite)
+			newSite.Children = append(newSite.Children, childSite)
+			childPos = s.GetSiblingSitePos(nextSiblingPos)
+			if !childPos.IsValid() {
+				break
+			}
+		}
+	}
+	s.nbSites++
+	fmt.Printf("found Site %3v <%3v> Id:%-12s #Site:%3d Type:%6s (%s)\t%s\n", pos, startPos, newSite.Id, newSite.NbSite(), newSite.Type, newSite.Color, newSite.Hierarchy())
+	nextSibling = Position{startPos.row + 2, startPos.col}
 	return
 }
 
+// getSiteBlock populates curSite with Block info, and returns first Child Position (invalid position if not found)
 func (s Syno) getSiteBlock(pos Position, curSite *site.Site) (nextChild Position) {
 	// seek for first row of site block
 	for {
-		left, bottom := s.HasBorder(Position{pos.row - 1, pos.col})
-		if !left && bottom {
+		if pos.row == 0 {
+			break
+		}
+		//_, bottom := s.HasBorder(Position{pos.row - 1, pos.col})
+		//if bottom {
+		//	break
+		//}
+		color := s.synoSheet.Cell(pos.row-1, pos.col).GetStyle().Fill.FgColor
+		if color == "" || color == "FFFFFFFF" {
 			break
 		}
 		pos.row--
@@ -185,35 +224,49 @@ func (s Syno) getSiteBlock(pos Position, curSite *site.Site) (nextChild Position
 	curSite.Color = s.synoSheet.Cell(pos.row+3, pos.col).GetStyle().Fill.FgColor
 
 	// seek for upwards child
-	cpos := Position{pos.row - 1, pos.col + 1}
-	for {
-		left, bottom := s.HasBorder(cpos)
-		//fmt.Printf("\t %v l:%v b:%v\n", cpos, left, bottom)
-		if !left && bottom {
-			return cpos // found first child pos
-		}
-		if !left && !bottom {
-			break // no child up there
-		}
-		cpos.row--
-	}
-
-	// seek for child on the right
-	cpos = Position{pos.row + 2, pos.col + 1}
-	for {
-		left, bottom := s.HasBorder(cpos)
-		if left && bottom {
-			return cpos // found first child pos
-		}
-		if !left {
-			break // no child up there
-		}
-		cpos.row++
-	}
-
-	return Position{}
+	return s.findFirstChild(Position{pos.row, pos.col + 1})
 }
 
 func siteCoords(p Position) Position {
+	return Position{}
+}
+
+// findFirstChild return highest child position (invalid position if not found)
+func (s Syno) findFirstChild(pos Position) Position {
+	// seek for upwards child
+	if pos.row > 0 {
+		upos := pos
+		for {
+			left, bottom := s.HasBorder(upos)
+			/////////////////////////////////////////////////////////////////////////////////////////////////
+			//if upos.row > 56 && upos.row < 83 && upos.col == 26 {
+			//	fmt.Printf("\t\t%v : left:%v bottom:%v\n", upos, left, bottom)
+			//}
+			/////////////////////////////////////////////////////////////////////////////////////////////////
+			if !left && bottom {
+				return upos // found first child pos
+			}
+			if !left && !bottom {
+				break // no child up there
+			}
+			if upos.row == 0 {
+				break
+			}
+			upos.row--
+		}
+	}
+
+	// seek for child on the right
+	rpos := pos
+	for {
+		left, bottom := s.HasBorder(rpos)
+		if bottom {
+			return rpos // found first child pos
+		}
+		if !left || rpos.row > pos.row+6 {
+			break // no child there
+		}
+		rpos.row++
+	}
 	return Position{}
 }
