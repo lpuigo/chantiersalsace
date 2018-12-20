@@ -29,10 +29,14 @@ type Site struct {
 func NewSite(fname string) *Site {
 	s := &Site{
 		FullName: fname,
-		Name:     strings.Split(fname, "-")[4], //keep 1010 in PBO-68-048-DXA-1010
+		Name:     GetShortName(fname), //keep 1010 in PBO-68-048-DXA-1010
 		Links:    make(map[string]Link),
 	}
 	return s
+}
+
+func GetShortName(fullname string) string {
+	return strings.Split(fullname, "-")[4]
 }
 
 func (s Site) String() string {

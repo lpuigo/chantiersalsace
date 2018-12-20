@@ -1,27 +1,26 @@
 package parsezacable
 
 import (
+	"fmt"
+	"github.com/lpuig/ewin/chantiersalsace/site"
 	"github.com/tealeg/xlsx"
+	"os"
+	"path/filepath"
 	"sort"
-	"strings"
 )
 
 type Zone struct {
-	FullName string // PBO-68-048-DXA
-	Name     string // DXA
+	Name string // DXA
 
 	Sites []*Site
 	Index map[string]int
 }
 
-func NewZone(fullname string) *Zone {
-	bs := strings.Split(fullname, "-")
-
+func NewZone(name string) *Zone {
 	z := &Zone{
-		FullName: strings.Join(bs[:4], "-"),
-		Name:     bs[3], //keep DXA in PBO-68-048-DXA
-		Sites:    []*Site{},
-		Index:    make(map[string]int),
+		Name:  name,
+		Sites: []*Site{},
+		Index: make(map[string]int),
 	}
 	return z
 }
@@ -64,4 +63,44 @@ func (z *Zone) ParseXLSSheet(xsh *xlsx.Sheet) error {
 	}
 	z.Add(s)
 	return nil
+}
+
+func (z *Zone) ParseXLSFile(file string) error {
+	fmt.Printf("Processing file '%s'\n", filepath.Base(file))
+	xf, err := xlsx.OpenFile(file)
+	if err != nil {
+		return fmt.Errorf("could not process xlsx file: %v", err)
+	}
+
+	for _, xs := range xf.Sheets {
+		fmt.Printf("\tParsing sheet %s\n", xs.Name)
+		err := z.ParseXLSSheet(xs)
+		if err != nil {
+			return fmt.Errorf("could not parse sheet %s: %v", xs.Name, err)
+		}
+	}
+	return nil
+}
+
+func (z *Zone) WriteXLS(file string) error {
+	of, err := os.Create(file)
+	if err != nil {
+		return err
+	}
+	defer of.Close()
+
+	xlsx.SetDefaultFont(11, "Calibri")
+	oxf := xlsx.NewFile()
+	oxs, err := oxf.AddSheet(z.Name)
+	if err != nil {
+		return err
+	}
+	z.Sites[0].WriteHeader()
+	hs.WriteXLSHeader(oxs)
+	for _, psite := range s.Sro.Children {
+		psite.WriteXLSRow(oxs)
+	}
+
+	return oxf.Write(of)
+
 }
