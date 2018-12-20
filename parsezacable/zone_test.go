@@ -3,13 +3,14 @@ package parsezacable
 import (
 	"fmt"
 	"github.com/tealeg/xlsx"
-	"strings"
 	"testing"
 )
 
 const (
-	testfile      = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\ZACABLE_1.xlsx`
-	testsheetname = "PBO-68-048-DXA-1010"
+	testfile        = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\ZACABLE_1.xlsx`
+	testresultfile  = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\DXA_Suivi.xlsx`
+	testsheetname   = "PBO-68-048-DXA-1010"
+	testblobpattern = `C:\Users\Laurent\Desktop\DXA\ZACABLE*\ZACABLE*.xlsx`
 )
 
 func openXLSFile(t *testing.T, file string) *xlsx.File {
@@ -43,8 +44,8 @@ func TestZone_ParseXLSSheet(t *testing.T) {
 }
 
 func TestZone_ParseXLSFile(t *testing.T) {
-	zone := NewZone(testsheetname)
-	err := zone.ParseXLSFile(strings.TrimPrefix(testfile, ".xlsx"))
+	zone := NewZone(GetShortZoneName(testsheetname))
+	err := zone.ParseXLSFile(testfile)
 	if err != nil {
 		t.Fatalf("parse XLS File returns: %v", err)
 	}
@@ -53,5 +54,31 @@ func TestZone_ParseXLSFile(t *testing.T) {
 	for _, sfn := range zone.GetSiteFullNames() {
 		s := zone.GetSiteByFullName(sfn)
 		fmt.Println(s.String())
+	}
+}
+
+func TestZone_WriteXLS(t *testing.T) {
+	zone := NewZone(GetShortZoneName(testsheetname))
+	err := zone.ParseXLSFile(testfile)
+	if err != nil {
+		t.Fatalf("parse XLS File returns: %v", err)
+	}
+
+	err = zone.WriteXLS(testresultfile)
+	if err != nil {
+		t.Fatal("zone.WriteXLS returns:", err)
+	}
+}
+
+func TestZone_ParseBlob(t *testing.T) {
+	zone := NewZone(GetShortZoneName(testsheetname))
+	err := zone.ParseBlob(testblobpattern)
+	if err != nil {
+		t.Fatalf("zone.ParseBlob returns: %v", err)
+	}
+
+	err = zone.WriteXLS(testresultfile)
+	if err != nil {
+		t.Fatal("zone.WriteXLS returns:", err)
 	}
 }
