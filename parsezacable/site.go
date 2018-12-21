@@ -84,7 +84,7 @@ func (s *Site) AddLink(ope, cableout string) {
 		ope = "<none>"
 	}
 	if cableout == "" {
-		cableout = "<boitier>"
+		cableout = "<Lovage>"
 	}
 	l, found := s.Links[cableout]
 	if !found {

@@ -7,10 +7,11 @@ import (
 )
 
 const (
-	testfile        = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\ZACABLE_1.xlsx`
-	testresultfile  = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\DXA_Suivi.xlsx`
-	testsheetname   = "PBO-68-048-DXA-1010"
-	testblobpattern = `C:\Users\Laurent\Desktop\DXA\ZACABLE*\ZACABLE*.xlsx`
+	testfile           = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\ZACABLE_1.xlsx`
+	testresultfile     = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\DXA_Suivi.xlsx`
+	testsheetname      = "PBO-68-048-DXA-1010"
+	testblobpattern    = `C:\Users\Laurent\Desktop\DXC\ZACABLE*\ZACABLE*.xlsx`
+	testblobresultfile = `C:\Users\Laurent\Desktop\DXC\DXC_Suivi.xlsx`
 )
 
 func openXLSFile(t *testing.T, file string) *xlsx.File {
@@ -77,7 +78,7 @@ func TestZone_ParseBlob(t *testing.T) {
 		t.Fatalf("zone.ParseBlob returns: %v", err)
 	}
 
-	err = zone.WriteXLS(testresultfile)
+	err = zone.WriteXLS(testblobresultfile)
 	if err != nil {
 		t.Fatal("zone.WriteXLS returns:", err)
 	}
