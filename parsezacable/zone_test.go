@@ -10,8 +10,8 @@ const (
 	testfile           = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\ZACABLE_1.xlsx`
 	testresultfile     = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\DXA_Suivi.xlsx`
 	testsheetname      = "PBO-68-048-DXA-1010"
-	testblobpattern    = `C:\Users\Laurent\Desktop\DXC\ZACABLE*\ZACABLE*.xlsx`
-	testblobresultfile = `C:\Users\Laurent\Desktop\DXC\DXC_Suivi.xlsx`
+	testblobpattern    = `C:\Users\Laurent\Desktop\DXA\ZACABLE*\ZACABLE*.xlsx`
+	testblobresultfile = `C:\Users\Laurent\Desktop\DXA\DXA_Suivi.xlsx`
 )
 
 func openXLSFile(t *testing.T, file string) *xlsx.File {
