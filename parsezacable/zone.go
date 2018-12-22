@@ -2,11 +2,11 @@ package parsezacable
 
 import (
 	"fmt"
-	"github.com/lpuig/ewin/chantiersalsace/site"
 	"github.com/tealeg/xlsx"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
 type Zone struct {
@@ -23,6 +23,10 @@ func NewZone(name string) *Zone {
 		Index: make(map[string]int),
 	}
 	return z
+}
+
+func GetShortZoneName(fullname string) string {
+	return strings.Split(fullname, "-")[3]
 }
 
 // Add adds the given Site to Zone.
@@ -82,7 +86,24 @@ func (z *Zone) ParseXLSFile(file string) error {
 	return nil
 }
 
+func (z *Zone) ParseBlob(pattern string) error {
+	files, err := filepath.Glob(pattern)
+	if err != nil {
+		return err
+	}
+	for _, f := range files {
+		err = z.ParseXLSFile(f)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (z *Zone) WriteXLS(file string) error {
+	if len(z.Sites) == 0 {
+		return fmt.Errorf("zone is empty, nothing to write to XLSx")
+	}
 	of, err := os.Create(file)
 	if err != nil {
 		return err
@@ -95,12 +116,13 @@ func (z *Zone) WriteXLS(file string) error {
 	if err != nil {
 		return err
 	}
-	z.Sites[0].WriteHeader()
-	hs.WriteXLSHeader(oxs)
-	for _, psite := range s.Sro.Children {
-		psite.WriteXLSRow(oxs)
+	z.Sites[0].WriteHeader(oxs)
+	sort.Slice(z.Sites, func(i, j int) bool {
+		return z.Sites[i].Name < z.Sites[j].Name
+	})
+	for _, s := range z.Sites {
+		s.WriteXLS(oxs)
 	}
 
 	return oxf.Write(of)
-
 }
