@@ -36,7 +36,8 @@ func NewSite(fname string) *Site {
 }
 
 func GetShortName(fullname string) string {
-	return strings.Split(fullname, "-")[4]
+	bs := strings.Split(fullname, "-")
+	return strings.Join(bs[4:], "-")
 }
 
 func (s Site) String() string {
