@@ -3,6 +3,7 @@ package parsezacable
 import (
 	"fmt"
 	"github.com/tealeg/xlsx"
+	"path/filepath"
 	"testing"
 )
 
@@ -10,8 +11,9 @@ const (
 	testfile           = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\ZACABLE_1.xlsx`
 	testresultfile     = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\DXA_Suivi.xlsx`
 	testsheetname      = "PBO-68-048-DXA-1010"
-	testblobpattern    = `C:\Users\Laurent\Desktop\DXA\ZACABLE*\ZACABLE*.xlsx`
-	testblobresultfile = `C:\Users\Laurent\Desktop\DXA\DXA_Suivi.xlsx`
+	testdir            = `C:\Users\Laurent\Desktop\DXC`
+	blobpattern        = `\ZACABLE*\ZACABLE*.xlsx`
+	testblobresultfile = `C:\Users\Laurent\Desktop\DXC\DXC_Suivi.xlsx`
 )
 
 func openXLSFile(t *testing.T, file string) *xlsx.File {
@@ -72,8 +74,9 @@ func TestZone_WriteXLS(t *testing.T) {
 }
 
 func TestZone_ParseBlob(t *testing.T) {
-	zone := NewZone(GetShortZoneName(testsheetname))
-	err := zone.ParseBlob(testblobpattern)
+	parseBlobPattern := filepath.Join(testdir, blobpattern)
+	zone := NewZone(filepath.Base(testdir))
+	err := zone.ParseBlob(parseBlobPattern)
 	if err != nil {
 		t.Fatalf("zone.ParseBlob returns: %v", err)
 	}

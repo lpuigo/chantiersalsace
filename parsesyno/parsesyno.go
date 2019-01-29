@@ -2,7 +2,7 @@ package parsesyno
 
 import (
 	"fmt"
-	"github.com/lpuig/ewin/chantiersalsace/site"
+	"github.com/lpuig/ewin/chantiersalsace/parsesyno/site"
 	"github.com/tealeg/xlsx"
 	"os"
 	"path/filepath"

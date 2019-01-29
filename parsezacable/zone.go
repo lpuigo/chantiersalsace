@@ -12,19 +12,22 @@ import (
 type Zone struct {
 	Name string // DXA
 
-	Sites []*Site
-	Index map[string]int
+	Sites     []*Site
+	Index     map[string]int
+	SynoIndex map[string]int
 }
 
 func NewZone(name string) *Zone {
 	z := &Zone{
-		Name:  name,
-		Sites: []*Site{},
-		Index: make(map[string]int),
+		Name:      name,
+		Sites:     []*Site{},
+		Index:     make(map[string]int),
+		SynoIndex: make(map[string]int),
 	}
 	return z
 }
 
+// GetShortZoneName returns ZoneName out of Box Ref (ex : PBO-68-048-DXA-1010 => DXA)
 func GetShortZoneName(fullname string) string {
 	return strings.Split(fullname, "-")[3]
 }
@@ -34,16 +37,27 @@ func GetShortZoneName(fullname string) string {
 func (z *Zone) Add(s *Site) {
 	si, found := z.Index[s.FullName]
 	if !found {
-		z.Index[s.FullName] = len(z.Sites)
+		numSite := len(z.Sites)
+		z.Index[s.FullName] = numSite
+		z.SynoIndex[s.Name] = numSite
 		z.Sites = append(z.Sites, s)
 		return
 	}
 	z.Sites[si] = s
 }
 
-// GetSiteByFullName returns the given named site (nil if none exists)
+// GetSiteByFullName returns the given full-named site (nil if none exists)
 func (z *Zone) GetSiteByFullName(fname string) *Site {
 	si, found := z.Index[fname]
+	if !found {
+		return nil
+	}
+	return z.Sites[si]
+}
+
+// GetSiteByName returns the given syno-named site (nil if none exists)
+func (z *Zone) GetSiteByName(fname string) *Site {
+	si, found := z.SynoIndex[fname]
 	if !found {
 		return nil
 	}
@@ -70,7 +84,7 @@ func (z *Zone) ParseXLSSheet(xsh *xlsx.Sheet) error {
 }
 
 func (z *Zone) ParseXLSFile(file string) error {
-	fmt.Printf("Processing file '%s'\n", filepath.Base(file))
+	fmt.Printf("Processing file '%s'\n", file)
 	xf, err := xlsx.OpenFile(file)
 	if err != nil {
 		return fmt.Errorf("could not process xlsx file: %v", err)
