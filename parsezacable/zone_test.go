@@ -11,7 +11,7 @@ const (
 	testfile           = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\ZACABLE_1.xlsx`
 	testresultfile     = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\DXA_Suivi.xlsx`
 	testsheetname      = "PBO-68-048-DXA-1010"
-	testdir            = `C:\Users\Laurent\Desktop\DXC`
+	testdir            = `C:\Users\Laurent\Desktop\DXA`
 	blobpattern        = `\ZACABLE*\ZACABLE*.xlsx`
 	testblobresultfile = `C:\Users\Laurent\Desktop\DXC\DXC_Suivi.xlsx`
 )
@@ -75,13 +75,15 @@ func TestZone_WriteXLS(t *testing.T) {
 
 func TestZone_ParseBlob(t *testing.T) {
 	parseBlobPattern := filepath.Join(testdir, blobpattern)
-	zone := NewZone(filepath.Base(testdir))
+	zoneName := filepath.Base(testdir)
+	zone := NewZone(zoneName)
 	err := zone.ParseBlob(parseBlobPattern)
 	if err != nil {
 		t.Fatalf("zone.ParseBlob returns: %v", err)
 	}
 
-	err = zone.WriteXLS(testblobresultfile)
+	resfile := filepath.Join(testdir, zoneName+"_suivi.xlsx")
+	err = zone.WriteXLS(resfile)
 	if err != nil {
 		t.Fatal("zone.WriteXLS returns:", err)
 	}

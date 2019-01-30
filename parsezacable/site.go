@@ -10,6 +10,11 @@ import (
 const (
 	lovage  string = "<Lovage>"
 	passage string = "<Passage>"
+
+	colAerien     string = "fffde9d9"
+	colSouterrain string = "ffdfedda"
+	colImmeuble   string = "ffe4dfec"
+	coldefault    string = "ffff8800"
 )
 
 type Dest struct {
@@ -204,7 +209,20 @@ func (s Site) writeSiteInfo(r *xlsx.Row) {
 	r.AddCell().SetInt(other + epi)
 	r.AddCell().SetInt(epi)
 
-	color := "FFdfedda"
+	locType := strings.ToLower(strings.TrimSpace(s.LocationType))
+	color := coldefault
+	switch {
+	case strings.HasPrefix(locType, "chambre"):
+		color = colSouterrain
+	case strings.HasPrefix(locType, "poteau"):
+		color = colAerien
+	case strings.HasPrefix(locType, "app"):
+		color = colAerien
+	case strings.HasPrefix(locType, "ancr"):
+		color = colAerien
+	case strings.HasPrefix(locType, "imm"):
+		color = colImmeuble
+	}
 	st := xlsx.NewStyle()
 	st.Fill = *xlsx.NewFill("solid", color, "00000000")
 	st.ApplyFill = true
