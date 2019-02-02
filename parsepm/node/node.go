@@ -14,13 +14,13 @@ type Node struct {
 	LocationType string // Chambre Orange (??)
 	Address      string // 0, FERME DU TOUPET AZOUDANGE (2,8)
 
-	cIn   *Cable
-	csOut Cables
+	CableIn   *Cable
+	CablesOut Cables
 }
 
 func NewNode() *Node {
 	n := &Node{
-		csOut: NewCables(),
+		CablesOut: NewCables(),
 	}
 	return n
 }
@@ -80,7 +80,7 @@ func (n *Node) ParseXLS(file string) error {
 				return fmt.Errorf("could not parse Cable Info line %d : %s", row+1, err.Error())
 			}
 			nc.Capa = int(nbFo)
-			n.csOut[infos[1]] = nc
+			n.CablesOut[infos[1]] = nc
 			continue
 		}
 		fiberIn := sheet.Cell(row, colFiberNumIn).Value
@@ -111,10 +111,10 @@ func (n *Node) ParseXLS(file string) error {
 	}
 	for _, cable := range cableIns {
 		if len(cable.Operation) > 0 {
-			if n.cIn != nil {
+			if n.CableIn != nil {
 				return fmt.Errorf("could not define unique cable In info")
 			}
-			n.cIn = cable
+			n.CableIn = cable
 		}
 	}
 	return nil
@@ -122,6 +122,117 @@ func (n *Node) ParseXLS(file string) error {
 
 func (n *Node) String(co Cables) string {
 	res := ""
-	res += fmt.Sprintf("%s : cableIn=%s", n.PtName, n.cIn.String(n.csOut))
+	res += fmt.Sprintf("%s : cableIn=%s", n.PtName, n.CableIn.String(n.CablesOut))
 	return res
+}
+
+func (n *Node) WriteHeader(xs *xlsx.Sheet) {
+	type col struct {
+		title string
+		width float64
+	}
+
+	cols := []col{
+		{"Nom Site", 12},
+		{"Adresse", 40},
+		{"Type Boitier", 15},
+		{"Type Site", 17},
+		{"Ref Site", 10},
+		{"Cable entrant", 15},
+		{"Taille", 8},
+
+		{"Opérations", 20},
+		{"Nb Fibre Sortant", 15},
+		{"Nb Epissure", 15},
+	}
+
+	r := xs.AddRow()
+	for i, ci := range cols {
+		r.AddCell().SetString(ci.title)
+		xs.Col(i).Width = ci.width
+	}
+}
+
+const (
+	colAerien     string = "fffde9d9"
+	colSouterrain string = "ffdfedda"
+	colImmeuble   string = "ffe4dfec"
+	coldefault    string = "ffff8800"
+)
+
+func (n *Node) WriteXLS(xs *xlsx.Sheet) {
+	n.writeSiteInfo(xs.AddRow())
+	for _, opname := range n.CableIn.Operations() {
+		r := xs.AddRow()
+		n.writeSitePrefix(r)
+		r.AddCell().SetString(n.GetOperationCapa(opname))
+		r.AddCell().SetString(opname)
+		epi, other := n.CableIn.GetOperationNumbers(opname)
+		r.AddCell().SetInt(other + epi)
+		r.AddCell().SetInt(epi)
+
+		st := xlsx.NewStyle()
+		//st.Fill = *xlsx.NewFill("solid", s.Color, "00000000")
+		st.Font = *xlsx.NewFont(10, "Calibri")
+		st.Font.Color = "FF6F6F6F"
+		st.ApplyFont = true
+		for i := 6; i < 10; i++ {
+			r.Cells[i].SetStyle(st)
+		}
+	}
+
+}
+
+func (n *Node) writeSiteInfo(r *xlsx.Row) {
+	r.AddCell().SetString(n.PtName)
+	r.AddCell().SetString(n.Address)
+	r.AddCell().SetString(n.BPEType)
+	r.AddCell().SetString(n.LocationType)
+	r.AddCell().SetString("todo")
+	r.AddCell().SetString(n.CableIn.Name)
+	r.AddCell().SetString(n.CableIn.CapaString())
+	r.AddCell().SetString("TOTAL")
+	epi, other := n.GetNumbers()
+	r.AddCell().SetInt(other + epi)
+	r.AddCell().SetInt(epi)
+
+	color := colSouterrain
+	//locType := strings.ToLower(strings.TrimSpace(n.LocationType))
+	//switch {
+	//case strings.HasPrefix(locType, "chambre"):
+	//	color = colSouterrain
+	//case strings.HasPrefix(locType, "poteau"):
+	//	color = colAerien
+	//case strings.HasPrefix(locType, "app"):
+	//	color = colAerien
+	//case strings.HasPrefix(locType, "ancr"):
+	//	color = colAerien
+	//case strings.HasPrefix(locType, "imm"):
+	//	color = colImmeuble
+	//}
+	st := xlsx.NewStyle()
+	st.Fill = *xlsx.NewFill("solid", color, "00000000")
+	st.ApplyFill = true
+	for i := 0; i < 10; i++ {
+		r.Cells[i].SetStyle(st)
+	}
+
+}
+
+func (n *Node) GetNumbers() (nbEpi, nbOther int) {
+	return n.CableIn.GetNumbers()
+}
+
+func (n *Node) writeSitePrefix(r *xlsx.Row) {
+	for i := 0; i < 6; i++ {
+		r.AddCell()
+	}
+}
+
+func (n *Node) GetOperationCapa(ope string) string {
+	if !strings.Contains(ope, "->") {
+		return ""
+	}
+	cname := strings.Split(ope, "->")[1]
+	return n.CablesOut[cname].CapaString()
 }

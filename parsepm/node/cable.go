@@ -29,16 +29,40 @@ func (c Cable) Operations() []string {
 
 func (c Cable) String(co Cables) string {
 	res := ""
-	res += fmt.Sprintf("Cable '%s' (%dFO)", c.Name, c.Capa)
+	res += fmt.Sprintf("Cable '%s' (%s)", c.Name, c.CapaString())
 	for _, ope := range c.Operations() {
 		if !strings.Contains(ope, "->") {
 			res += fmt.Sprintf("\n\t%s : %d", ope, c.Operation[ope])
 			continue
 		}
 		cname := strings.Split(ope, "->")[1]
-		res += fmt.Sprintf("\n\t%s (%dFO): %d", ope, co[cname].Capa, c.Operation[ope])
+		res += fmt.Sprintf("\n\t%s (%s): %d", ope, co[cname].CapaString(), c.Operation[ope])
 	}
 	return res
+}
+
+func (c Cable) CapaString() string {
+	return fmt.Sprintf("%dFO", c.Capa)
+}
+
+func (c Cable) GetNumbers() (nbEpi, nbOther int) {
+	for ope, _ := range c.Operation {
+		e, o := c.GetOperationNumbers(ope)
+		nbEpi += e
+		nbOther += o
+	}
+	return
+}
+
+func (c Cable) GetOperationNumbers(ope string) (nbEpi, nbOther int) {
+	lope := strings.ToLower(ope)
+	switch {
+	case strings.HasPrefix(lope, "epissure"):
+		nbEpi += c.Operation[ope]
+	default:
+		nbOther += c.Operation[ope]
+	}
+	return
 }
 
 type Cables map[string]*Cable
@@ -57,7 +81,7 @@ func (cs Cables) Add(name, ope, fo, dest string) {
 	if ope == "Love" || ope == "" {
 		return
 	}
-	key := ope
+	key := strings.Title(strings.ToLower(ope))
 	if fo != "" {
 		key += "->" + dest
 	}
