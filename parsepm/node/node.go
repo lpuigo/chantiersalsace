@@ -3,6 +3,7 @@ package node
 import (
 	"fmt"
 	"github.com/tealeg/xlsx"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -16,6 +17,8 @@ type Node struct {
 
 	CableIn   *Cable
 	CablesOut Cables
+
+	Children []*Node
 }
 
 func NewNode() *Node {
@@ -42,7 +45,23 @@ const (
 	colCableDict    = 18
 )
 
-func (n *Node) ParseXLS(file string) error {
+func (n *Node) AddChild(cn *Node) {
+	for _, cc := range n.Children {
+		if cc.PtName == cn.PtName {
+			return
+		}
+	}
+	n.Children = append(n.Children, cn)
+}
+
+func (n *Node) GetChildren() []*Node {
+	sort.Slice(n.Children, func(i, j int) bool {
+		return n.Children[i].PtName < n.Children[j].PtName
+	})
+	return n.Children
+}
+
+func (n *Node) ParseBPEXLS(file string) error {
 	xls, err := xlsx.OpenFile(file)
 	if err != nil {
 		return err
@@ -126,6 +145,14 @@ func (n *Node) String(co Cables) string {
 	return res
 }
 
+func (n *Node) Tree(prefix, header string, level int) string {
+	res := fmt.Sprintf("%s%d '%s' (%s): %d children\n", header, level, n.Name, n.PtName, len(n.Children))
+	for _, cn := range n.GetChildren() {
+		res += cn.Tree(prefix, header+prefix, level+1)
+	}
+	return res
+}
+
 func (n *Node) WriteHeader(xs *xlsx.Sheet) {
 	type col struct {
 		title string
@@ -181,6 +208,9 @@ func (n *Node) WriteXLS(xs *xlsx.Sheet) {
 		}
 	}
 
+	for _, cnode := range n.GetChildren() {
+		cnode.WriteXLS(xs)
+	}
 }
 
 func (n *Node) writeSiteInfo(r *xlsx.Row) {
@@ -188,7 +218,7 @@ func (n *Node) writeSiteInfo(r *xlsx.Row) {
 	r.AddCell().SetString(n.Address)
 	r.AddCell().SetString(n.BPEType)
 	r.AddCell().SetString(n.LocationType)
-	r.AddCell().SetString("todo")
+	r.AddCell().SetString(n.Name)
 	r.AddCell().SetString(n.CableIn.Name)
 	r.AddCell().SetString(n.CableIn.CapaString())
 	r.AddCell().SetString("TOTAL")

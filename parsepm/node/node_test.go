@@ -19,7 +19,7 @@ func TestNode_ParseXLS(t *testing.T) {
 	}
 	for _, f := range files {
 		n := NewNode()
-		err := n.ParseXLS(f)
+		err := n.ParseBPEXLS(f)
 		if err != nil {
 			t.Errorf("'%s' returned unexpected : %s\n", filepath.Base(f), err.Error())
 		}
