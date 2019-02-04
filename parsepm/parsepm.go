@@ -25,9 +25,6 @@ func main() {
 	}
 
 	fmt.Print(pm.Sro.Tree("- ", "", 0))
-	//for _, tn := range pm.TopNodes {
-	//	fmt.Print(tn.Tree("- ", "", 0))
-	//}
 
 	err = pm.WriteXLS(testBPEDir, testXLS)
 	if err != nil {
