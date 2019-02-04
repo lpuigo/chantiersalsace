@@ -181,10 +181,11 @@ func (n *Node) WriteHeader(xs *xlsx.Sheet) {
 }
 
 const (
-	colAerien     string = "fffde9d9"
-	colSouterrain string = "ffdfedda"
-	colImmeuble   string = "ffe4dfec"
-	coldefault    string = "ffff8800"
+	colAerien       string = "fffde9d9"
+	colSouterrain   string = "ffdfedda"
+	colSansEpissure string = "ffb7dee8"
+	colImmeuble     string = "ffe4dfec"
+	coldefault      string = "ffff8800"
 )
 
 func (n *Node) WriteXLS(xs *xlsx.Sheet) {
@@ -228,18 +229,18 @@ func (n *Node) writeSiteInfo(r *xlsx.Row) {
 
 	color := colSouterrain
 	//locType := strings.ToLower(strings.TrimSpace(n.LocationType))
-	//switch {
-	//case strings.HasPrefix(locType, "chambre"):
-	//	color = colSouterrain
-	//case strings.HasPrefix(locType, "poteau"):
-	//	color = colAerien
-	//case strings.HasPrefix(locType, "app"):
-	//	color = colAerien
-	//case strings.HasPrefix(locType, "ancr"):
-	//	color = colAerien
-	//case strings.HasPrefix(locType, "imm"):
-	//	color = colImmeuble
-	//}
+	switch {
+	case epi == 0:
+		color = colSansEpissure
+		//case strings.HasPrefix(locType, "poteau"):
+		//	color = colAerien
+		//case strings.HasPrefix(locType, "app"):
+		//	color = colAerien
+		//case strings.HasPrefix(locType, "ancr"):
+		//	color = colAerien
+		//case strings.HasPrefix(locType, "imm"):
+		//	color = colImmeuble
+	}
 	st := xlsx.NewStyle()
 	st.Fill = *xlsx.NewFill("solid", color, "00000000")
 	st.ApplyFill = true
