@@ -13,7 +13,7 @@ const (
 )
 
 func main() {
-	pm := zone.Zone{}
+	pm := zone.New()
 	err := pm.ParseBPEDir(testBPEDir)
 	if err != nil {
 		log.Fatal("could not parse :", err)
@@ -24,9 +24,10 @@ func main() {
 		log.Fatal("could not parse ROP file:", err)
 	}
 
-	for _, tn := range pm.TopNodes {
-		fmt.Print(tn.Tree("- ", "", 0))
-	}
+	fmt.Print(pm.Sro.Tree("- ", "", 0))
+	//for _, tn := range pm.TopNodes {
+	//	fmt.Print(tn.Tree("- ", "", 0))
+	//}
 
 	err = pm.WriteXLS(testBPEDir, testXLS)
 	if err != nil {

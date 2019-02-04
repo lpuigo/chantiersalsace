@@ -10,8 +10,22 @@ import (
 )
 
 type Zone struct {
-	Nodes    []*node.Node
-	TopNodes []*node.Node
+	Nodes []*node.Node
+	//TopNodes []*node.Node
+	Sro *node.Node
+}
+
+func New() *Zone {
+	z := &Zone{
+		Nodes: []*node.Node{},
+		//TopNodes: []*node.Node{},
+		Sro: node.NewNode(),
+	}
+	z.Sro.Name = "SRO"
+	z.Sro.PtName = "SRO"
+	z.Sro.BPEType = "SRO"
+	z.Sro.CableIn = node.NewCable("Aduction")
+	return z
 }
 
 const (
@@ -27,15 +41,15 @@ func (z *Zone) GetNodeByPtName(ptname string) *node.Node {
 	return nil
 }
 
-func (z *Zone) AddTopNode(n *node.Node) {
-	for _, tn := range z.TopNodes {
-		if tn.PtName == n.PtName {
-			return
-		}
-	}
-	z.TopNodes = append(z.TopNodes, n)
-}
-
+//func (z *Zone) AddTopNode(n *node.Node) {
+//	for _, tn := range z.TopNodes {
+//		if tn.PtName == n.PtName {
+//			return
+//		}
+//	}
+//	z.TopNodes = append(z.TopNodes, n)
+//}
+//
 func (z *Zone) ParseBPEDir(dir string) error {
 	parseBlobPattern := filepath.Join(dir, blobpattern)
 	files, err := filepath.Glob(parseBlobPattern)
@@ -69,9 +83,10 @@ func (z *Zone) WriteXLS(dir, name string) error {
 
 	z.Nodes[0].WriteHeader(sheet)
 
-	for _, s := range z.TopNodes {
-		s.WriteXLS(sheet)
-	}
+	z.Sro.WriteXLS(sheet)
+	//for _, s := range z.TopNodes {
+	//	s.WriteXLS(sheet)
+	//}
 
 	of, err := os.Create(file)
 	if err != nil {

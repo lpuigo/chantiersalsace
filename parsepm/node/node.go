@@ -115,7 +115,7 @@ func (n *Node) ParseBPEXLS(file string) error {
 		}
 		tube := sheet.Cell(row, colTubulure).Value
 
-		if fiberIn != "" { // No Input Cable info available , skip to Output Cable parsing
+		if fiberIn != "" { // Input Cable info available, process it
 			cableIns.Add(cableIn, ope, fiberOut, cableOut)
 		}
 
@@ -265,4 +265,14 @@ func (n *Node) GetOperationCapa(ope string) string {
 	}
 	cname := strings.Split(ope, "->")[1]
 	return n.CablesOut[cname].CapaString()
+}
+
+func (n *Node) SetOperationFromChildren() {
+	for _, cn := range n.Children {
+		n.CableIn.Capa += cn.CableIn.Capa
+		key := "Epissure->" + cn.CableIn.Name
+		n.CableIn.Operation[key] = cn.CableIn.Capa
+
+		n.CablesOut[cn.CableIn.Name] = cn.CableIn
+	}
 }

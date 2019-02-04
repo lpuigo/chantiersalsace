@@ -76,7 +76,7 @@ func (rp *RopParser) ParseRop() {
 	for !done {
 		if rp.GetValue(0) != "" {
 			topnode := rp.Parse()
-			rp.zone.AddTopNode(topnode)
+			rp.zone.Sro.AddChild(topnode)
 			continue
 		}
 		if rp.GetValue(-1) == "" {
@@ -85,6 +85,7 @@ func (rp *RopParser) ParseRop() {
 		}
 		rp.pos.row++
 	}
+	rp.zone.Sro.SetOperationFromChildren()
 }
 
 func (rp *RopParser) Parse() *node.Node {
