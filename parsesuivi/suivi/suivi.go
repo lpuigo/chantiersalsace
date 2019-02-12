@@ -41,7 +41,8 @@ func (s *Suivi) Add(b *Bpe) {
 }
 
 const (
-	colBpeName   int = 1
+	colBpeName   int = 0
+	colBpeType   int = 2
 	colBpeSize   int = 6
 	colBpeOpe    int = 7
 	colBpeFiber  int = 8
@@ -123,7 +124,8 @@ func NewSuiviFromXLS(file string, pc *bpu.Bpu) (s *Suivi, err error) {
 }
 
 const (
-	suiviSheetName string = "Suivi"
+	suiviSheetName      string = "Suivi"
+	attachmentSheetName string = "Attachement"
 )
 
 func (s *Suivi) WriteSuiviXLS(file string) error {
@@ -132,22 +134,29 @@ func (s *Suivi) WriteSuiviXLS(file string) error {
 		return err
 	}
 
+	s.writeAttachmentSheet(xf)
+	s.writeSuiviSheet(xf)
+	return xf.Save()
+}
+
+func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 	if xf.GetSheetIndex(suiviSheetName) == 0 {
 		xf.NewSheet(suiviSheetName)
 	}
 
-	fTodo := func(bpe *Bpe) bool { return bpe.ToDo == true }
+	fTodo := func(bpe *Bpe) bool { return bpe.ToDo }
 	fNbBpe := func(bpe *Bpe) int { return 1 }
 	fNbFiber := func(bpe *Bpe) int { return bpe.NbFiber }
 	fNbSplice := func(bpe *Bpe) int { return bpe.NbSplice }
 	fValue := func(bpe *Bpe) float64 { return bpe.BpeValue + bpe.SpliceValue }
+
 	nbBPE := s.CountInt(fNbBpe, fTodo)
 	nbFiber := s.CountInt(fNbFiber, fTodo)
 	nbSplice := s.CountInt(fNbSplice, fTodo)
 	nbValue := s.CountFloat(fValue, fTodo)
 
 	// Set Dates header
-	xf.SetCellValue(suiviSheetName, xls.RcToAxis(0, 0), "Dates")
+	xf.SetCellValue(suiviSheetName, xls.RcToAxis(0, 0), "Semaines")
 	xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, 0), "Nb BPE Total")
 	xf.SetCellValue(suiviSheetName, xls.RcToAxis(2, 0), "Nb BPE Installés")
 	xf.SetCellValue(suiviSheetName, xls.RcToAxis(3, 0), "Nb Fibre Total")
@@ -169,7 +178,40 @@ func (s *Suivi) WriteSuiviXLS(file string) error {
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(7, i+1), nbValue)
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(8, i+1), s.CountFloat(fValue, fDone))
 	}
-	return xf.Save()
+}
+
+func (s *Suivi) writeAttachmentSheet(xf *excelize.File) {
+	if xf.GetSheetIndex(attachmentSheetName) == 0 {
+		xf.NewSheet(attachmentSheetName)
+	}
+
+	row := 0
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), "Bpe")
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), "Type")
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), "Taille")
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), "Nb Epissure")
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), "€ Boitier")
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), "€ Epissures")
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), "Installé")
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), "Semaine")
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 8), "€ Total")
+	for _, b := range s.Bpes {
+		if !b.ToDo {
+			continue
+		}
+		row++
+		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), b.Name)
+		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), b.Type)
+		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), fmt.Sprintf("%dFO", b.Size))
+		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), b.NbSplice)
+		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), b.BpeValue)
+		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), b.SpliceValue)
+		if b.Done {
+			xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), "Oui")
+			xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), b.Date)
+			xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 8), b.BpeValue+b.SpliceValue)
+		}
+	}
 }
 
 func (s *Suivi) Dates() []time.Time {

@@ -10,6 +10,8 @@ import (
 )
 
 type Bpe struct {
+	Name        string
+	Type        string
 	Size        int
 	NbFiber     int
 	NbSplice    int
@@ -22,6 +24,8 @@ type Bpe struct {
 
 func NewBpeFromXLSRow(sh *xlsx.Sheet, row int) (*Bpe, error) {
 	bpe := &Bpe{}
+	bpe.Name = sh.Cell(row, colBpeName).Value
+	bpe.Type = sh.Cell(row, colBpeType).Value
 	size := sh.Cell(row, colBpeSize).Value
 	if !strings.HasSuffix(size, "FO") {
 		return nil, fmt.Errorf("unexpected Bpe Size format '%s' line %d", size, row+1)

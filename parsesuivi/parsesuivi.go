@@ -8,6 +8,10 @@ import (
 )
 
 const (
+	//testDir      string = `C:\Users\Laurent\Desktop\Suivi PM3`
+	//bpuFile             = `BPU Axians Moselle.xlsx`
+	//suiviFile           = `PM3_suivi 02_12.xlsx`
+	//suiviOutFile        = `PM3_Suivi.xlsx`
 	testDir      string = `C:\Users\Laurent\Desktop\Suivi`
 	bpuFile             = `BPU Axians Alsace v1.xlsx`
 	suiviFile           = `DXC_Suivi Equipe v2 - MAJ 08 FEB S06.xlsx`
@@ -15,7 +19,6 @@ const (
 )
 
 func main() {
-
 	pricecat, err := bpu.NewBpuFromXLS(filepath.Join(testDir, bpuFile))
 	if err != nil {
 		log.Fatalf("could not create PriceCatalog: %s", err.Error())
