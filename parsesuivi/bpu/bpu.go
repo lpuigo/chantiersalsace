@@ -2,10 +2,9 @@ package bpu
 
 import (
 	"fmt"
-	"github.com/360EntSecGroup-Skylar/excelize"
+	"github.com/lpuig/ewin/chantiersalsace/parsesuivi/xls"
 	"github.com/tealeg/xlsx"
 	"sort"
-	"strconv"
 )
 
 type Bpu struct {
@@ -43,14 +42,14 @@ func NewBpuFromXLS(file string) (bpu *Bpu, err error) {
 		}
 		size, e := psh.Cell(row, 0).Int()
 		if e != nil {
-			err = fmt.Errorf("could not get size info '%s' in sheet '%s(%s)'", ssize, bpuPriceSheetName, rcToAxis(row, 0))
+			err = fmt.Errorf("could not get size info '%s' in sheet '%s(%s)'", ssize, bpuPriceSheetName, xls.RcToAxis(row, 0))
 			return
 		}
 		entry := NewPrice(int(size))
 		for col := 1; col < 3; col++ {
 			fval, e := psh.Cell(row, col).Float()
 			if e != nil {
-				err = fmt.Errorf("could not get value '%s' in sheet '%s(%s)'", psh.Cell(row, col).Value, bpuPriceSheetName, rcToAxis(row, col))
+				err = fmt.Errorf("could not get value '%s' in sheet '%s(%s)'", psh.Cell(row, col).Value, bpuPriceSheetName, xls.RcToAxis(row, col))
 				return
 			}
 			entry.Income[header[col]] = fval
@@ -63,10 +62,6 @@ func NewBpuFromXLS(file string) (bpu *Bpu, err error) {
 	})
 
 	return
-}
-
-func rcToAxis(row, col int) string {
-	return excelize.ToAlphaString(col) + strconv.Itoa(row+1)
 }
 
 func (bpu *Bpu) String() string {

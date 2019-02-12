@@ -64,7 +64,7 @@ func NewBpeFromXLSRow(sh *xlsx.Sheet, row int) (*Bpe, error) {
 	if e != nil {
 		return nil, fmt.Errorf("could not parse Bpe End Date from '%s' line %d", sh.Cell(row, colBpeDate).Value, row+1)
 	}
-	bpe.Date = date
+	bpe.Date = GetMonday(date)
 	return bpe, nil
 }
 

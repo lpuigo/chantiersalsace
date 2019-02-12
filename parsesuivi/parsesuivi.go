@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/lpuig/ewin/chantiersalsace/parsesuivi/bpu"
 	"github.com/lpuig/ewin/chantiersalsace/parsesuivi/suivi"
 	"log"
@@ -9,9 +8,10 @@ import (
 )
 
 const (
-	testDir   string = `C:\Users\Laurent\Desktop\Suivi`
-	bpuFile          = `BPU Axians Alsace v1.xlsx`
-	suiviFile        = `DXC_Suivi Equipe v2 - MAJ 08 FEB S06.xlsx`
+	testDir      string = `C:\Users\Laurent\Desktop\Suivi`
+	bpuFile             = `BPU Axians Alsace v1.xlsx`
+	suiviFile           = `DXC_Suivi Equipe v2 - MAJ 08 FEB S06.xlsx`
+	suiviOutFile        = `DXC_Suivi.xlsx`
 )
 
 func main() {
@@ -29,6 +29,8 @@ func main() {
 		log.Fatalf("could not create progress: %s", err.Error())
 	}
 
-	fmt.Print(progress.String())
-
+	err = progress.WriteSuiviXLS(filepath.Join(testDir, suiviOutFile))
+	if err != nil {
+		log.Fatalf("could not Write Suivi XLS: %s", err.Error())
+	}
 }
