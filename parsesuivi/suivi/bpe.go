@@ -96,18 +96,25 @@ func (b *Bpe) SetValues(pc *bpu.Bpu) {
 	b.SpliceValue = p.GetSpliceValue(b.NbSplice)
 }
 
-func (b *Bpe) SetSroValues(pc *bpu.Bpu) {
+func (b *Bpe) GetSroNumbers(pc *bpu.Bpu) (nbSro, nbMissingModule int) {
 	p, mp := pc.GetSroPrice()
 	b.PriceName = p.Name
-	nb := b.NbSplice / p.Size
-	b.BpeValue = p.GetBpeValue() * float64(nb)
+	nbSro = b.NbSplice / p.Size
 
 	// check for missing modules
-	if nb*p.Size < b.NbSplice {
-		nbMissingSplice := (nb+1)*p.Size - b.NbSplice
-		nbMissingModule := nbMissingSplice / mp.Size
-		b.BpeValue += p.GetBpeValue() + mp.GetBpeValue()*float64(nbMissingModule)
+	nbMissingModule = 0
+	if nbSro*p.Size < b.NbSplice {
+		nbSro++
+		nbMissingSplice := nbSro*p.Size - b.NbSplice
+		nbMissingModule = nbMissingSplice / mp.Size
 	}
+	return
+}
+
+func (b *Bpe) SetSroValues(pc *bpu.Bpu) {
+	p, mp := pc.GetSroPrice()
+	nbSro, nbMissingModule := b.GetSroNumbers(pc)
+	b.BpeValue = p.GetBpeValue()*float64(nbSro) + mp.GetBpeValue()*float64(nbMissingModule)
 }
 
 func (b *Bpe) String() string {

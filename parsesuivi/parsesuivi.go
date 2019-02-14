@@ -39,7 +39,7 @@ func main() {
 		log.Fatalf("could not Write Suivi XLS: %s", err.Error())
 	}
 
-	err = progress.WriteAttachmentXLS(filepath.Join(testDir, attachmentOutFile))
+	err = progress.WriteAttachmentXLS(filepath.Join(testDir, attachmentOutFile), pricecat)
 	if err != nil {
 		log.Fatalf("could not Write Suivi XLS: %s", err.Error())
 	}
