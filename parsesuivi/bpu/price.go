@@ -1,6 +1,7 @@
 package bpu
 
 type Price struct {
+	Name   string
 	Size   int
 	Income map[string]float64
 }

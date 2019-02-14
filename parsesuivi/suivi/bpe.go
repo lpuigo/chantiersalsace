@@ -17,6 +17,7 @@ type Bpe struct {
 	NbSplice    int
 	BpeValue    float64
 	SpliceValue float64
+	PriceName   string
 	ToDo        bool
 	Done        bool
 	Date        time.Time
@@ -80,10 +81,33 @@ func (b *Bpe) CheckSplice(splice int) bool {
 	return b.NbSplice == splice
 }
 
+func (b *Bpe) IsSro() bool {
+	return strings.HasPrefix(strings.ToLower(b.Name), "sro")
+}
+
 func (b *Bpe) SetValues(pc *bpu.Bpu) {
-	p := pc.GetPrice(b.Size)
+	if b.IsSro() {
+		b.SetSroValues(pc)
+		return
+	}
+	p := pc.GetBpePrice(b.Type)
+	b.PriceName = p.Name
 	b.BpeValue = p.GetBpeValue()
 	b.SpliceValue = p.GetSpliceValue(b.NbSplice)
+}
+
+func (b *Bpe) SetSroValues(pc *bpu.Bpu) {
+	p, mp := pc.GetSroPrice()
+	b.PriceName = p.Name
+	nb := b.NbSplice / p.Size
+	b.BpeValue = p.GetBpeValue() * float64(nb)
+
+	// check for missing modules
+	if nb*p.Size < b.NbSplice {
+		nbMissingSplice := (nb+1)*p.Size - b.NbSplice
+		nbMissingModule := nbMissingSplice / mp.Size
+		b.BpeValue += p.GetBpeValue() + mp.GetBpeValue()*float64(nbMissingModule)
+	}
 }
 
 func (b *Bpe) String() string {

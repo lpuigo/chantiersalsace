@@ -51,7 +51,7 @@ const (
 	colBpeDate   int = 14
 )
 
-func NewSuiviFromXLS(file string, pc *bpu.Bpu) (s *Suivi, err error) {
+func NewSuiviFromXLS(file string, priceCatalog *bpu.Bpu) (s *Suivi, err error) {
 	xf, err := xlsx.OpenFile(file)
 	if err != nil {
 		return
@@ -92,7 +92,12 @@ func NewSuiviFromXLS(file string, pc *bpu.Bpu) (s *Suivi, err error) {
 			if err != nil {
 				return
 			}
-			bpe.SetValues(pc)
+			// check if bpeType is known from priceCatalog
+			if _, found := priceCatalog.Boxes[bpe.Type]; !found {
+				err = fmt.Errorf("unknown Bpe Type '%s' on line %d", bpe.Type, bpeRow+1)
+				return
+			}
+			bpe.SetValues(priceCatalog)
 			s.Add(bpe)
 			nbFiber = 0
 			nbSplice = 0
@@ -125,6 +130,7 @@ func NewSuiviFromXLS(file string, pc *bpu.Bpu) (s *Suivi, err error) {
 
 const (
 	suiviSheetName      string = "Suivi"
+	progressSheetName   string = "Avancement"
 	attachmentSheetName string = "Attachement"
 )
 
@@ -133,9 +139,16 @@ func (s *Suivi) WriteSuiviXLS(file string) error {
 	if err != nil {
 		return err
 	}
-
-	s.writeAttachmentSheet(xf)
 	s.writeSuiviSheet(xf)
+	return xf.Save()
+}
+
+func (s *Suivi) WriteAttachmentXLS(file string) error {
+	xf, err := excelize.OpenFile(file)
+	if err != nil {
+		return err
+	}
+	s.writeAttachmentSheet(xf)
 	return xf.Save()
 }
 
@@ -181,35 +194,31 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 }
 
 func (s *Suivi) writeAttachmentSheet(xf *excelize.File) {
-	if xf.GetSheetIndex(attachmentSheetName) == 0 {
-		xf.NewSheet(attachmentSheetName)
+	if xf.GetSheetIndex(progressSheetName) == 0 {
+		xf.NewSheet(progressSheetName)
 	}
 
 	row := 0
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), "Bpe")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), "Type")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), "Taille")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), "Nb Epissure")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), "€ Boitier")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), "€ Epissures")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), "Installé")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), "Semaine")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 8), "€ Total")
+	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 0), "Bpe")
+	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 1), "Type Boitier")
+	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 2), "Taille Tronçon")
+	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 3), "Nb Epissure")
+	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 4), "Ref Catalogue")
+	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 5), "Installé")
+	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 6), "Semaine")
 	for _, b := range s.Bpes {
 		if !b.ToDo {
 			continue
 		}
 		row++
-		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), b.Name)
-		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), b.Type)
-		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), fmt.Sprintf("%dFO", b.Size))
-		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), b.NbSplice)
-		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), b.BpeValue)
-		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), b.SpliceValue)
+		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 0), b.Name)
+		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 1), b.Type)
+		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 2), fmt.Sprintf("%dFO", b.Size))
+		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 3), b.NbSplice)
+		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 4), b.PriceName)
 		if b.Done {
-			xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), "Oui")
-			xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), b.Date)
-			xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 8), b.BpeValue+b.SpliceValue)
+			xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 5), "Oui")
+			xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 6), b.Date)
 		}
 	}
 }
