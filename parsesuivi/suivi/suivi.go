@@ -151,6 +151,7 @@ func (s *Suivi) WriteAttachmentXLS(file string, priceCatalog *bpu.Bpu) error {
 
 	s.writeAttachmentSheet(xf, priceCatalog)
 	s.writeProgressSheet(xf)
+	xf.UpdateLinkedValue()
 	return xf.Save()
 }
 
@@ -204,13 +205,16 @@ func (s *Suivi) writeAttachmentSheet(xf *excelize.File, priceCatalog *bpu.Bpu) {
 	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), "Ref.")
 	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), "Prix Unit. Boitier")
 	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), "Quantité Boitier")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), "Prix Unit. Epissure")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), "Quantité Epissure")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), "Montant HT")
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), "Boitiers Réalisés")
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), "Prix Unit. Epissure")
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), "Quantité Epissure")
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), "Epissures Réalisées")
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), "Montant HT")
 
 	row++
 	// SRO
 	ps, pm := priceCatalog.GetSroPrice()
+	fTDSro := func(bpe *Bpe) bool { return bpe.ToDo && bpe.IsSro() }
 	fSro := func(bpe *Bpe) bool { return bpe.ToDo && bpe.Done && bpe.IsSro() }
 	fNbSro := func(bpe *Bpe) int {
 		nbSro, _ := bpe.GetSroNumbers(priceCatalog)
@@ -223,10 +227,12 @@ func (s *Suivi) writeAttachmentSheet(xf *excelize.File, priceCatalog *bpu.Bpu) {
 	fSroValue := func(bpe *Bpe) float64 { return bpe.BpeValue }
 	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), ps.Name)
 	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), ps.GetBpeValue())
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), s.CountInt(fNbSro, fSro))
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), pm.GetBpeValue())
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), s.CountInt(fNbSroMissingModule, fSro))
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), s.CountFloat(fSroValue, fSro))
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), s.CountInt(fNbSro, fTDSro))
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), s.CountInt(fNbSro, fSro))
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), pm.GetBpeValue())
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), s.CountInt(fNbSroMissingModule, fTDSro))
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), s.CountInt(fNbSroMissingModule, fSro))
+	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), s.CountFloat(fSroValue, fSro))
 
 	// Bpe
 	fNbBpe := func(bpe *Bpe) int { return 1 }
@@ -234,13 +240,16 @@ func (s *Suivi) writeAttachmentSheet(xf *excelize.File, priceCatalog *bpu.Bpu) {
 	fValue := func(bpe *Bpe) float64 { return bpe.BpeValue + bpe.SpliceValue }
 	for _, p := range priceCatalog.BpePrices {
 		row++
+		fTDBpe := func(bpe *Bpe) bool { return bpe.ToDo && bpe.PriceName == p.Name }
 		fBpe := func(bpe *Bpe) bool { return bpe.ToDo && bpe.Done && bpe.PriceName == p.Name }
 		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), p.Name)
 		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), p.GetBpeValue())
-		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), s.CountInt(fNbBpe, fBpe))
-		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), p.GetSpliceValue(1))
-		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), s.CountInt(fNbSplice, fBpe))
-		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), s.CountFloat(fValue, fBpe))
+		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), s.CountInt(fNbBpe, fTDBpe))
+		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), s.CountInt(fNbBpe, fBpe))
+		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), p.GetSpliceValue(1))
+		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), s.CountInt(fNbSplice, fTDBpe))
+		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), s.CountInt(fNbSplice, fBpe))
+		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), s.CountFloat(fValue, fBpe))
 	}
 }
 
