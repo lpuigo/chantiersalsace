@@ -11,8 +11,8 @@ const (
 	testfile           = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\ZACABLE_1.xlsx`
 	testresultfile     = `C:\Users\Laurent\Golang\src\github.com\lpuig\ewin\chantiersalsace\parsezacable\test\DXA_Suivi.xlsx`
 	testsheetname      = "PBO-68-048-DXA-1010"
-	testdir            = `C:\Users\Laurent\Desktop\DXA`
-	blobpattern        = `\ZACABLE*\ZACABLE*.xlsx`
+	testdir            = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Alsace\Chantier\ECF`
+	blobpattern        = `ZACABLE*.xlsx`
 	testblobresultfile = `C:\Users\Laurent\Desktop\DXC\DXC_Suivi.xlsx`
 )
 
