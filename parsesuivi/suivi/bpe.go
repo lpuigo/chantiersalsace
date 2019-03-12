@@ -57,9 +57,6 @@ func NewBpeFromXLSRow(sh *xlsx.Sheet, row int) (*Bpe, error) {
 	default:
 		bpe.ToDo = true
 	}
-	if strings.ToLower(done) == "ok" {
-
-	}
 
 	if !bpe.Done {
 		return bpe, nil

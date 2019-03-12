@@ -23,9 +23,16 @@ const (
 	//attachmentOutFile string = `DXC_Attachement.xlsx`
 
 	// Alsace ECF
-	testDir           string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Alsace\Chantier\ECE Suivi`
+	//testDir           string = `C:\Users\Laurent\Desktop\Suivi`
+	//bpuFile           string = `BPU Axians Alsace.xlsx`
+	//suiviFile         string = `ECF_suivi_19-03-12.xlsx`
+	//suiviOutFile      string = `ECF_Suivi.xlsx`
+	//attachmentOutFile string = `ECF_Attachement.xlsx`
+
+	// Alsace ECE
+	testDir           string = `C:\Users\Laurent\Desktop\Suivi`
 	bpuFile           string = `BPU Axians Alsace.xlsx`
-	suiviFile         string = `ECE_suivi_init.xlsx`
+	suiviFile         string = `ECE_suivi_19-02-20.xlsx`
 	suiviOutFile      string = `ECE_Suivi.xlsx`
 	attachmentOutFile string = `ECE_Attachement.xlsx`
 )
@@ -41,16 +48,16 @@ func main() {
 
 	progress, err := suivi.NewSuiviFromXLS(filepath.Join(testDir, suiviFile), pricecat)
 	if err != nil {
-		log.Fatalf("could not create progress: %s", err.Error())
+		log.Fatalf("%s: could not create progress: %s", suiviFile, err.Error())
 	}
 
 	err = progress.WriteSuiviXLS(filepath.Join(testDir, suiviOutFile))
 	if err != nil {
-		log.Fatalf("could not Write Suivi XLS: %s", err.Error())
+		log.Fatalf("%s: could not Write Suivi XLS: %s", suiviOutFile, err.Error())
 	}
 
 	err = progress.WriteAttachmentXLS(filepath.Join(testDir, attachmentOutFile), pricecat)
 	if err != nil {
-		log.Fatalf("could not Write Suivi XLS: %s", err.Error())
+		log.Fatalf("%s: could not Write Suivi XLS: %s", attachmentOutFile, err.Error())
 	}
 }
