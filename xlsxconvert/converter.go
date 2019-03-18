@@ -11,7 +11,7 @@ const (
 	blobpattern string = `*.xls`
 )
 
-func OleXlsToCsv(inFile string) []error {
+func OleXlsToXlsx(inFile string) []error {
 	option := excel.Option{"Visible": false, "DisplayAlerts": false}
 	//xl, _ := excel.New(option)
 	xl, _ := excel.Open(inFile, option)
@@ -31,7 +31,7 @@ func ConvertDir(dir string) error {
 	}
 	for _, f := range files {
 		fmt.Printf("Converting '%s' ... ", f)
-		errs := OleXlsToCsv(f)
+		errs := OleXlsToXlsx(f)
 		if len(errs) > 1 && errs[0] != nil {
 			fmt.Printf("%s\n", errs[0].Error())
 			continue

@@ -12,7 +12,7 @@ const (
 
 func TestOleXlsToCsv(t *testing.T) {
 	file := filepath.Join(testDir, testXLS)
-	err := OleXlsToCsv(file)
+	err := OleXlsToXlsx(file)
 	if len(err) > 0 && err[0] != nil {
 		t.Fatal(err[0])
 	}
