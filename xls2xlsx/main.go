@@ -16,33 +16,52 @@ const (
 	blobpattern string = `*.xls`
 )
 
+//go:generate bash build_debug.sh
+//go:generate bash build.sh
+
 func main() {
 	gc := GuiContext{}
-	_, err := MainWindow{
-		Title:   "EWIN Services XLS to XLSx",
-		MinSize: Size{640, 480},
-		Layout:  VBox{},
+	err := MainWindow{
+		AssignTo: &gc.MainWindow,
+		Title:    "EWIN Services XLS to XLSx",
+		MinSize:  Size{640, 480},
 		OnDropFiles: func(files []string) {
 			go gc.GoConvert(files)
 		},
+		Layout: VBox{},
 		Children: []Widget{
-			Label{Text: "Glisser des fichiers XLS ici ..."},
+			//Label{Text: "Glisser des fichiers XLS ici ..."},
+			CheckBox{
+				Alignment:           AlignHNearVCenter,
+				AssignTo:            &gc.eraseFileCB,
+				Text:                "Supprimer les fichiers XLS originaux après conversion",
+				OnCheckStateChanged: func() { gc.SwitchEraseState() },
+			},
 			TextEdit{
+				Text:      "Glisser des fichiers XLS ici ...\r\n",
 				AssignTo:  &gc.textEdit,
 				ReadOnly:  true,
 				VScroll:   true,
 				MaxLength: 100 * 1024,
 			},
 		},
-	}.Run()
+	}.Create()
 	if err != nil {
 		log.Fatal(err)
 	}
+	gc.eraseFileCB.SetChecked(true)
+	gc.Run()
 }
 
 type GuiContext struct {
-	textEdit *walk.TextEdit
-	msg      chan string
+	*walk.MainWindow
+	textEdit    *walk.TextEdit
+	eraseFileCB *walk.CheckBox
+	msg         chan string
+}
+
+func (gc *GuiContext) SwitchEraseState() {
+	gc.textEdit.AppendText(fmt.Sprintf("Effacer les fichiers originaux : %t\r\n", gc.eraseFileCB.Checked()))
 }
 
 func (gc *GuiContext) GoConvert(files []string) {
@@ -112,5 +131,12 @@ func (gc *GuiContext) ConvertToXlsx(filename string) {
 	errs := xlsxconvert.OleXlsToXlsx(filename)
 	if len(errs) > 1 && errs[0] != nil {
 		gc.Logf("\tfailed : %s\r\n", errs[0].Error())
+		return
+	}
+	if !gc.eraseFileCB.Checked() {
+		return
+	}
+	if err := os.Remove(filename); err != nil {
+		gc.Logf("\tcould not delete file '%s' : %v\r\n", filename, err.Error())
 	}
 }
