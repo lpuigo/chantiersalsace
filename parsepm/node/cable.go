@@ -71,19 +71,23 @@ func NewCables() Cables {
 	return make(map[string]*Cable)
 }
 
-func (cs Cables) Add(name, ope, fo, dest string) {
-	cable, found := cs[name]
+func (cs Cables) Add(cableIn, ope, fiberOut, cableOut string) {
+	cable, found := cs[cableIn]
 	if !found {
-		cable = NewCable(name)
-		cs[name] = cable
+		cable = NewCable(cableIn)
+		cs[cableIn] = cable
 	}
 	cable.Capa++
 	if ope == "Love" || ope == "" {
 		return
 	}
 	key := strings.Title(strings.ToLower(ope))
-	if fo != "" {
-		key += "->" + dest
+	if fiberOut != "" {
+		if cableIn == "" {
+			key += "<-" + cableOut
+		} else {
+			key += "->" + cableOut
+		}
 	}
 	cable.Operation[key]++
 }

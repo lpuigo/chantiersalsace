@@ -19,6 +19,7 @@ type Node struct {
 	CablesOut Cables
 
 	Children []*Node
+	IsChild  bool
 }
 
 func NewNode() *Node {
@@ -115,7 +116,7 @@ func (n *Node) ParseBPEXLS(file string) error {
 		}
 		tube := sheet.Cell(row, colTubulure).Value
 
-		if fiberIn != "" { // Input Cable info available, process it
+		if fiberIn != "" || fiberOut != "" { // Input or Output Cable info available, process it
 			cableIns.Add(cableIn, ope, fiberOut, cableOut)
 		}
 

@@ -16,25 +16,25 @@ const (
 	//attachmentOutFile string = `PM3_Attachement.xlsx`
 
 	// Alsace DXC
-	//testDir           string = `C:\Users\Laurent\Desktop\Suivi`
-	//bpuFile           string = `BPU Axians Alsace.xlsx`
-	//suiviFile         string = `DXC_Suivi Equipe v2 - MAJ15 FEB S07.xlsx`
-	//suiviOutFile      string = `DXC_Suivi.xlsx`
-	//attachmentOutFile string = `DXC_Attachement.xlsx`
+	testDir           string = `C:\Users\Laurent\Desktop\Suivi`
+	bpuFile           string = `BPU Axians Alsace.xlsx`
+	suiviFile         string = `DXC_Suivi Equipe v2 - MAJ27 FEB S09.xlsx`
+	suiviOutFile      string = `DXC_Suivi.xlsx`
+	attachmentOutFile string = `DXC_Attachement.xlsx`
 
 	// Alsace ECF
 	//testDir           string = `C:\Users\Laurent\Desktop\Suivi`
 	//bpuFile           string = `BPU Axians Alsace.xlsx`
-	//suiviFile         string = `ECF_suivi_19-03-12.xlsx`
+	//suiviFile         string = `ECF_suivi_19-03-20 S12.xlsx`
 	//suiviOutFile      string = `ECF_Suivi.xlsx`
 	//attachmentOutFile string = `ECF_Attachement.xlsx`
 
 	// Alsace ECE
-	testDir           string = `C:\Users\Laurent\Desktop\Suivi`
-	bpuFile           string = `BPU Axians Alsace.xlsx`
-	suiviFile         string = `ECE_suivi_19-02-20.xlsx`
-	suiviOutFile      string = `ECE_Suivi.xlsx`
-	attachmentOutFile string = `ECE_Attachement.xlsx`
+	//testDir           string = `C:\Users\Laurent\Desktop\Suivi`
+	//bpuFile           string = `BPU Axians Alsace.xlsx`
+	//suiviFile         string = `ECE_suivi_19-02-20.xlsx`
+	//suiviOutFile      string = `ECE_Suivi.xlsx`
+	//attachmentOutFile string = `ECE_Attachement.xlsx`
 )
 
 func main() {

@@ -10,8 +10,9 @@ import (
 )
 
 type Zone struct {
-	Nodes []*node.Node
-	Sro   *node.Node
+	Nodes     []*node.Node
+	Sro       *node.Node
+	NodeRoots []*node.Node
 }
 
 func New() *Zone {
@@ -46,7 +47,12 @@ func (z *Zone) ParseBPEDir(dir string) error {
 		return err
 	}
 	for _, f := range files {
+		if strings.HasPrefix(filepath.Base(f), "~") {
+			continue
+		}
 		n := node.NewNode()
+		fname := filepath.Base(f)
+		_ = fname
 		err := n.ParseBPEXLS(f)
 		if err != nil {
 			return fmt.Errorf("parsing '%s' returned error : %s\n", filepath.Base(f), err.Error())
@@ -106,4 +112,38 @@ func (z *Zone) ParseROPXLS(file string) error {
 	rp.ParseRop()
 
 	return nil
+}
+
+func (z *Zone) CreateBPETree() {
+	// Create Cable list with source / dest node
+	cables := map[string]Link{}
+	for _, nod := range z.Nodes {
+		if nod.CableIn != nil && nod.CableIn.Name != "" {
+			link := cables[nod.CableIn.Name]
+			link.Dest = nod
+			cables[nod.CableIn.Name] = link
+		}
+		for cableName, cable := range nod.CablesOut {
+			if nod.CableIn != nil && nod.CableIn.Name == cable.Name {
+				continue
+			}
+			link := cables[cableName]
+			link.Source = nod
+			cables[cableName] = link
+		}
+	}
+	// Populate Nodes Children
+	for _, link := range cables {
+		if link.Source != nil && link.Dest != nil {
+			link.Source.Children = append(link.Source.Children, link.Dest)
+			link.Dest.IsChild = true
+		}
+	}
+	// Detect Root Nodes
+	for _, nod := range z.Nodes {
+		if nod.IsChild {
+			continue
+		}
+		z.NodeRoots = append(z.NodeRoots, nod)
+	}
 }
