@@ -17,8 +17,9 @@ type Zone struct {
 
 func New() *Zone {
 	z := &Zone{
-		Nodes: []*node.Node{},
-		Sro:   node.NewNode(),
+		Nodes:     []*node.Node{},
+		NodeRoots: []*node.Node{},
+		Sro:       node.NewNode(),
 	}
 	z.Sro.Name = "SRO"
 	z.Sro.PtName = "SRO"
@@ -47,6 +48,7 @@ func (z *Zone) ParseBPEDir(dir string) error {
 		return err
 	}
 	for _, f := range files {
+		// skip XLS temp files
 		if strings.HasPrefix(filepath.Base(f), "~") {
 			continue
 		}
@@ -78,7 +80,13 @@ func (z *Zone) WriteXLS(dir, name string) error {
 
 	z.Nodes[0].WriteHeader(sheet)
 
-	z.Sro.WriteXLS(sheet)
+	if len(z.Sro.Children) > 0 {
+		z.Sro.WriteXLS(sheet)
+	} else {
+		for _, rootnode := range z.NodeRoots {
+			rootnode.WriteXLS(sheet)
+		}
+	}
 
 	of, err := os.Create(file)
 	if err != nil {
@@ -133,17 +141,25 @@ func (z *Zone) CreateBPETree() {
 		}
 	}
 	// Populate Nodes Children
-	for _, link := range cables {
-		if link.Source != nil && link.Dest != nil {
-			link.Source.Children = append(link.Source.Children, link.Dest)
-			link.Dest.IsChild = true
+	for cableName, link := range cables {
+		if link.Source != nil {
+			if link.Dest != nil {
+				link.Source.Children = append(link.Source.Children, link.Dest)
+				link.Dest.IsChild = true
+			} else {
+				link.Source.AddPMChild(link.Source.CablesOut[cableName])
+			}
 		}
 	}
-	// Detect Root Nodes
+	// Detect and attach root nodes to new PM (TODO : detect PM using PM Splice file)
 	for _, nod := range z.Nodes {
 		if nod.IsChild {
 			continue
 		}
-		z.NodeRoots = append(z.NodeRoots, nod)
+		if nod.CableIn != nil && nod.CableIn.Name != "" {
+			z.NodeRoots = append(z.NodeRoots, node.NewPMNode(nod))
+		} else {
+			z.NodeRoots = append(z.NodeRoots, nod)
+		}
 	}
 }

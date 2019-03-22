@@ -29,6 +29,30 @@ func NewNode() *Node {
 	return n
 }
 
+func NewPMNode(child *Node) *Node {
+	pm := NewNode()
+	pm.Name = "PM"
+	pm.PtName = "PT PM"
+	pm.BPEType = "PM"
+	pm.LocationType = "PM"
+	//pm.Address = ""
+	//pm.CableIn = nil
+	if child != nil && child.CableIn.Name != "" {
+		pm.Children = []*Node{child}
+		//pm.IsChild = false
+		child.IsChild = true
+
+		cableIn := NewCable("")
+		cableIn.Operation["Epissure->"+child.CableIn.Name] = child.CableIn.Capa
+		pm.CableIn = cableIn
+		pm.CablesOut[""] = cableIn
+		cableOut := NewCable(child.CableIn.Name)
+		cableOut.Capa = child.CableIn.Capa
+		pm.CablesOut[child.CableIn.Name] = cableOut
+	}
+	return pm
+}
+
 const (
 	rowPtName  = 1
 	colPtName  = 8
@@ -53,6 +77,12 @@ func (n *Node) AddChild(cn *Node) {
 		}
 	}
 	n.Children = append(n.Children, cn)
+}
+
+func (n *Node) AddPMChild(cable *Cable) {
+	cpm := NewPMNode(nil)
+	cpm.CableIn = cable
+	n.Children = append(n.Children, cpm)
 }
 
 func (n *Node) GetChildren() []*Node {

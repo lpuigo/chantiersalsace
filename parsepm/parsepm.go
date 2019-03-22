@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	testBPEDir  string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\MBeck - AUDUN-LE-TICHE\Info\BPE`
-	testROPXlsx string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\MBeck - AUDUN-LE-TICHE\Info\CCPE_DES_PM3_ROP.xlsx`
-	testXLS     string = `PM3`
+	testBPEDir  string = `C:\Users\Laurent\Desktop\Info\CCAM_GUE_TR_BPE`
+	testROPXlsx string = `C:\Users\Laurent\Desktop\Info\CCPE_DES_PM3_ROP.xlsx`
+	testXLS     string = `GUE_TR`
 )
 
 func main() {
