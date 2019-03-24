@@ -198,10 +198,15 @@ func (n *Node) WriteHeader(xs *xlsx.Sheet) {
 		{"Ref Site", 10},
 		{"Cable entrant", 15},
 		{"Taille", 8},
-
 		{"Opérations", 20},
 		{"Nb Fibre Sortant", 15},
 		{"Nb Epissure", 15},
+
+		{"Statut", 15},
+		{"Acteur(s)", 15},
+		{"N° Déplacement", 15},
+		{"Début", 15},
+		{"Fin", 15},
 	}
 
 	r := xs.AddRow()

@@ -52,6 +52,8 @@ const (
 )
 
 func NewSuiviFromXLS(file string, priceCatalog *bpu.Bpu) (s *Suivi, err error) {
+	parseErr := Error{}
+
 	xf, err := xlsx.OpenFile(file)
 	if err != nil {
 		return
@@ -79,28 +81,26 @@ func NewSuiviFromXLS(file string, priceCatalog *bpu.Bpu) (s *Suivi, err error) {
 		if bpeName != "" { // This Row contains BPE definition, parse and process it
 			if bpe != nil {
 				if !bpe.CheckFiber(nbFiber) {
-					err = fmt.Errorf("invalid Nb Fiber for Bpe on line %d", bpeRow+1)
-					return
+					parseErr.Add(fmt.Errorf("line %4d: invalid Nb Fiber for Bpe", bpeRow+1))
 				}
 				if !bpe.CheckSplice(nbSplice) {
-					err = fmt.Errorf("invalid Nb Splice for Bpe on line %d", bpeRow+1)
-					return
+					parseErr.Add(fmt.Errorf("line %4d: invalid Nb Splice for Bpe", bpeRow+1))
 				}
 			}
 			bpeRow = row
 			bpe, err = NewBpeFromXLSRow(bsh, row)
 			if err != nil {
-				return
+				parseErr.Add(err)
+			} else {
+				// check if bpeType is known from priceCatalog
+				if _, found := priceCatalog.Boxes[bpe.Type]; !found {
+					parseErr.Add(fmt.Errorf("line %4d: unknown Bpe Type '%s'", bpeRow+1, bpe.Type))
+				}
+				bpe.SetValues(priceCatalog)
+				s.Add(bpe)
+				nbFiber = 0
+				nbSplice = 0
 			}
-			// check if bpeType is known from priceCatalog
-			if _, found := priceCatalog.Boxes[bpe.Type]; !found {
-				err = fmt.Errorf("unknown Bpe Type '%s' on line %d", bpe.Type, bpeRow+1)
-				return
-			}
-			bpe.SetValues(priceCatalog)
-			s.Add(bpe)
-			nbFiber = 0
-			nbSplice = 0
 			continue
 		}
 		// this row contains BPE detail, check for fiber and splice number
@@ -109,8 +109,7 @@ func NewSuiviFromXLS(file string, priceCatalog *bpu.Bpu) (s *Suivi, err error) {
 		if sf != "" {
 			nbf, e := bsh.Cell(row, colBpeFiber).Int()
 			if e != nil {
-				err = fmt.Errorf("could not parse Nb Fiber from '%s' line %d", sf, row+1)
-				return
+				parseErr.Add(fmt.Errorf("line %4d: could not parse Nb Fiber from '%s'", row+1, sf))
 			}
 			nbFiber += nbf
 		}
@@ -118,11 +117,14 @@ func NewSuiviFromXLS(file string, priceCatalog *bpu.Bpu) (s *Suivi, err error) {
 		if ss {
 			nbs, e := bsh.Cell(row, colBpeSplice).Int()
 			if e != nil {
-				err = fmt.Errorf("could not parse Nb Splice from '%s' line %d", ss, row+1)
-				return
+				parseErr.Add(fmt.Errorf("line %4d: could not parse Nb Splice from '%s'", row+1, ss))
 			}
 			nbSplice += nbs
 		}
+	}
+
+	if parseErr.HasError() {
+		err = parseErr
 	}
 
 	return

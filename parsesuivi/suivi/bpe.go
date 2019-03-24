@@ -29,22 +29,22 @@ func NewBpeFromXLSRow(sh *xlsx.Sheet, row int) (*Bpe, error) {
 	bpe.Type = sh.Cell(row, colBpeType).Value
 	size := sh.Cell(row, colBpeSize).Value
 	if !strings.HasSuffix(size, "FO") {
-		return nil, fmt.Errorf("unexpected Bpe Size format '%s' line %d", size, row+1)
+		return nil, fmt.Errorf("line %4d: unexpected Bpe Size format '%s'", row+1, size)
 	}
 	isize, e := strconv.ParseInt(strings.TrimSuffix(size, "FO"), 10, 64)
 	if e != nil {
-		return nil, fmt.Errorf("could not parse Bpe Size from '%s' line %d", strings.TrimSuffix(size, "FO"), row+1)
+		return nil, fmt.Errorf("line %4d: could not parse Bpe Size from '%s'", row+1, strings.TrimSuffix(size, "FO"))
 	}
 	bpe.Size = int(isize)
 
 	bpe.NbFiber, e = sh.Cell(row, colBpeFiber).Int()
 	if e != nil {
-		return nil, fmt.Errorf("could not parse Bpe Nb Fiber from '%s' line %d", sh.Cell(row, colBpeFiber).Value, row+1)
+		return nil, fmt.Errorf("line %4d: could not parse Bpe Nb Fiber from '%s'", row+1, sh.Cell(row, colBpeFiber).Value)
 	}
 
 	bpe.NbSplice, e = sh.Cell(row, colBpeSplice).Int()
 	if e != nil {
-		return nil, fmt.Errorf("could not parse Bpe Nb Splice from '%s' line %d", sh.Cell(row, colBpeSplice).Value, row+1)
+		return nil, fmt.Errorf("line %4d: could not parse Bpe Nb Splice from '%s'", row+1, sh.Cell(row, colBpeSplice).Value)
 	}
 
 	done := sh.Cell(row, colBpeStatus).Value
@@ -64,7 +64,7 @@ func NewBpeFromXLSRow(sh *xlsx.Sheet, row int) (*Bpe, error) {
 
 	date, e := sh.Cell(row, colBpeDate).GetTime(false)
 	if e != nil {
-		return nil, fmt.Errorf("could not parse Bpe End Date from '%s' line %d", sh.Cell(row, colBpeDate).Value, row+1)
+		return nil, fmt.Errorf("line %4d: could not parse Bpe End Date from '%s'", row+1, sh.Cell(row, colBpeDate).Value)
 	}
 	bpe.Date = GetMonday(date)
 	return bpe, nil
