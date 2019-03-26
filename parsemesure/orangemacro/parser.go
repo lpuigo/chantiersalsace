@@ -31,11 +31,12 @@ const (
 )
 
 func XlsToTxt(fileExt, file string) error {
+	fmt.Printf("Processing file: %s\n", file)
 	mc, err := Parse(file)
 	if err != nil {
 		return err
 	}
-	txtFile := strings.TrimPrefix(file, fileExt) + ".txt"
+	txtFile := strings.TrimSuffix(file, fileExt) + ".txt"
 	f, err := os.Create(txtFile)
 	if err != nil {
 		return err
