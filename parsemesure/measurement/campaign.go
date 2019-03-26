@@ -12,7 +12,7 @@ type Campaign struct {
 	Measurements []Measurement
 }
 
-func (c Campaign) Write(w io.Writer) {
+func (c Campaign) Write(w io.Writer) error {
 	_, _ = fmt.Fprintf(w, "Nb File	%d\r\n\r\n", len(c.Measurements))
 	_, _ = fmt.Fprintf(w, "[Results]\r\n")
 	_, _ = fmt.Fprintf(w, "Alarms 	Fib #	Dir.	Laser 	Tot loss	 Distance	Evt	Max Splice	Tot ORL	Max Connector 	Len. Max Splice	\r\n")
@@ -29,7 +29,7 @@ func (c Campaign) Write(w io.Writer) {
 			formatFloat(".1", m.LenMaxSplice),
 		)
 	}
-	return
+	return nil
 }
 
 func formatFloat(format string, val float64) string {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/lpuig/ewin/chantiersalsace/dirbrowser"
 	"github.com/lpuig/ewin/chantiersalsace/xlsxconvert"
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
@@ -115,14 +116,22 @@ func (gc *GuiContext) Convert(filenames []string) {
 
 func (gc *GuiContext) ConvertDirToXlsx(dir string) {
 	gc.Logf("Processing dir %s :\r\n", dir)
-	parseBlobPattern := filepath.Join(dir, blobpattern)
-	files, err := filepath.Glob(parseBlobPattern)
-	if err != nil {
-		gc.Logf("\tfailed : %s\r\n", err.Error())
-		return
+	//parseBlobPattern := filepath.Join(dir, blobpattern)
+	//files, err := filepath.Glob(parseBlobPattern)
+	//if err != nil {
+	//	gc.Logf("\tfailed : %s\r\n", err.Error())
+	//	return
+	//}
+	//for _, f := range files {
+	//	gc.ConvertToXlsx(f)
+	//}
+	fn := func(file string) error {
+		gc.ConvertToXlsx(file)
+		return nil
 	}
-	for _, f := range files {
-		gc.ConvertToXlsx(f)
+	err := dirbrowser.Process(dir, ".xls", fn)
+	if err != nil {
+		gc.Logf("\tError :%s\r\n", err.Error())
 	}
 }
 

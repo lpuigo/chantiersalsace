@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/lpuig/ewin/chantiersalsace/parsemesure/measurement"
 	"github.com/tealeg/xlsx"
+	"os"
+	"strings"
 )
 
 type Parser struct {
@@ -28,6 +30,20 @@ const (
 	reportTotLengthCol int = 7
 )
 
+func XlsToTxt(fileExt, file string) error {
+	mc, err := Parse(file)
+	if err != nil {
+		return err
+	}
+	txtFile := strings.TrimPrefix(file, fileExt) + ".txt"
+	f, err := os.Create(txtFile)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return mc.Write(f)
+}
+
 func Parse(file string) (mc measurement.Campaign, err error) {
 	xf, err := xlsx.OpenFile(file)
 	if err != nil {
@@ -36,7 +52,7 @@ func Parse(file string) (mc measurement.Campaign, err error) {
 
 	xs := xf.Sheet[sheetName]
 	if xs == nil {
-		err = fmt.Errorf("Could not find tab '%s' in file '%s'", sheetName, file)
+		err = fmt.Errorf("could not find tab '%s' in file '%s'", sheetName, file)
 		return
 	}
 
