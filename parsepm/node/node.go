@@ -218,10 +218,16 @@ func (n *Node) WriteHeader(xs *xlsx.Sheet) {
 
 const (
 	colAerien       string = "fffde9d9"
+	colPM           string = "fffde9d9"
 	colSouterrain   string = "ffdfedda"
+	colPBO          string = "ffdfedda"
 	colSansEpissure string = "ffb7dee8"
+	colBPE          string = "ffb7dee8"
 	colImmeuble     string = "ffe4dfec"
 	coldefault      string = "ffff8800"
+	colError        string = "ffff0000"
+
+	nbCol int = 10
 )
 
 func (n *Node) WriteXLS(xs *xlsx.Sheet) {
@@ -251,23 +257,17 @@ func (n *Node) WriteXLS(xs *xlsx.Sheet) {
 }
 
 func (n *Node) writeSiteInfo(r *xlsx.Row) {
-	r.AddCell().SetString(n.PtName)
-	r.AddCell().SetString(n.Address)
-	r.AddCell().SetString(n.BPEType)
-	r.AddCell().SetString(n.LocationType)
-	r.AddCell().SetString(n.Name)
-	r.AddCell().SetString(n.CableIn.Name)
-	r.AddCell().SetString(n.CableIn.CapaString())
-	r.AddCell().SetString("TOTAL")
 	epi, other := n.GetNumbers()
-	r.AddCell().SetInt(other + epi)
-	r.AddCell().SetInt(epi)
-
-	color := colSouterrain
+	color := colBPE
+	locationType := "BPE"
 	//locType := strings.ToLower(strings.TrimSpace(n.LocationType))
 	switch {
+	case n.Name == "SRO":
+		color = colPM
+		locationType = "PM"
 	case epi == 0:
-		color = colSansEpissure
+		color = colPBO
+		locationType = "PBO"
 		//case strings.HasPrefix(locType, "poteau"):
 		//	color = colAerien
 		//case strings.HasPrefix(locType, "app"):
@@ -277,13 +277,25 @@ func (n *Node) writeSiteInfo(r *xlsx.Row) {
 		//case strings.HasPrefix(locType, "imm"):
 		//	color = colImmeuble
 	}
+
+	r.AddCell().SetString(n.PtName)
+	r.AddCell().SetString(n.Address)
+	r.AddCell().SetString(n.BPEType)
+	//r.AddCell().SetString(n.LocationType) // attribute not set at parse time ... use business rule to assert value instead
+	r.AddCell().SetString(locationType)
+	r.AddCell().SetString(n.Name)
+	r.AddCell().SetString(n.CableIn.Name)
+	r.AddCell().SetString(n.CableIn.CapaString())
+	r.AddCell().SetString("TOTAL")
+	r.AddCell().SetInt(other + epi)
+	r.AddCell().SetInt(epi)
+
 	st := xlsx.NewStyle()
 	st.Fill = *xlsx.NewFill("solid", color, "00000000")
 	st.ApplyFill = true
-	for i := 0; i < 10; i++ {
+	for i := 0; i < nbCol; i++ {
 		r.Cells[i].SetStyle(st)
 	}
-
 }
 
 func (n *Node) GetNumbers() (nbEpi, nbOther int) {

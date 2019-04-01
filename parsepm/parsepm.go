@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	testBPEDir  string = `C:\Users\Laurent\Desktop\Info\CCAM_GUE_TR_BPE`
-	testROPXlsx string = `C:\Users\Laurent\Desktop\Info\CCPE_DES_PM3_ROP.xlsx`
-	testXLS     string = `GUE_TR`
+	testDir     string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM03\`
+	testBPEDir  string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM03\CCAM_KED_PM03_BPE`
+	testROPXlsx string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM03\CCAM_KED_PM03_ROP\CCAM_KED_PM03_ROP.xlsx`
+	testXLS     string = `KED_PM03`
 )
 
 func main() {
@@ -34,7 +35,7 @@ func main() {
 		pm.CreateBPETree()
 	}
 
-	err = pm.WriteXLS(testBPEDir, testXLS)
+	err = pm.WriteXLS(testDir, testXLS)
 	if err != nil {
 		log.Fatal("could not write XLSx :", err)
 	}
