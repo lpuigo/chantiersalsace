@@ -5,6 +5,7 @@ import (
 	"github.com/lpuig/ewin/chantiersalsace/parsepm/node"
 	"github.com/tealeg/xlsx"
 	"gopkg.in/src-d/go-vitess.v1/vt/log"
+	"strconv"
 )
 
 type Pos struct {
@@ -23,10 +24,11 @@ type RopParser struct {
 }
 
 const (
-	colCableIn   int = 2
-	colName      int = 4
-	colPtName    int = 5
-	colNextBlock int = 8
+	colCableIn    int = 2
+	colName       int = 4
+	colPtName     int = 5
+	colDistFromPM int = 6
+	colNextBlock  int = 8
 )
 
 func NewRopParser(sh *xlsx.Sheet, zone *Zone) *RopParser {
@@ -55,6 +57,7 @@ func (rp *RopParser) GetValue(colOffset int) string {
 	return rp.sheet.Cell(rp.pos.row, rp.pos.col+colOffset).Value
 }
 
+// ChildExists returns true if Child block exists
 func (rp *RopParser) ChildExists() bool {
 	if rp.GetPosValue(0, rp.pos.col+colNextBlock) == "T" && rp.GetValue(colNextBlock) != "" {
 		return true
@@ -62,6 +65,7 @@ func (rp *RopParser) ChildExists() bool {
 	return false
 }
 
+// SetNodeInfo sets node Name and check CableIn consistency
 func (rp *RopParser) SetNodeInfo(n *node.Node) {
 	n.Name = rp.GetValue(colName)
 	// check cable In consistency
@@ -88,12 +92,19 @@ func (rp *RopParser) ParseRop() {
 	rp.zone.Sro.SetOperationFromChildren()
 }
 
+// Parse returns current block Node (populated with all its defined children) and move RopParser pos to the next child within same level
 func (rp *RopParser) Parse() *node.Node {
 	ptName := rp.GetValue(colPtName)
 	currentNode := rp.zone.GetNodeByPtName(ptName)
 	if currentNode == nil {
 		rp.debug(fmt.Sprintf("could not get node from ptname '%s'", ptName))
 	}
+	distString := rp.GetValue(colDistFromPM)
+	dist, err := strconv.ParseInt(distString, 10, 64)
+	if err != nil {
+		rp.debug(fmt.Sprintf("could not get distance from '%s'", distString))
+	}
+	currentNode.DistFromPM = int(dist)
 	rp.SetNodeInfo(currentNode)
 	inNode := true
 	for inNode {

@@ -14,6 +14,7 @@ type Node struct {
 	BPEType      string // TENIO T1 (4, 1)
 	LocationType string // Chambre Orange (??)
 	Address      string // 0, FERME DU TOUPET AZOUDANGE (2,8)
+	DistFromPM   int
 
 	CableIn   *Cable
 	CablesOut Cables
