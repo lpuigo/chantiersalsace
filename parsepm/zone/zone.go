@@ -6,40 +6,34 @@ import (
 	"github.com/tealeg/xlsx"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
 type Zone struct {
-	Nodes     []*node.Node
+	Nodes     node.Nodes
+	Troncons  node.Troncons
 	Sro       *node.Node
 	NodeRoots []*node.Node
 }
 
 func New() *Zone {
 	z := &Zone{
-		Nodes:     []*node.Node{},
+		Nodes:     node.NewNodes(),
+		Troncons:  node.NewTroncons(),
 		NodeRoots: []*node.Node{},
 		Sro:       node.NewNode(),
 	}
 	z.Sro.Name = "SRO"
 	z.Sro.PtName = "SRO"
 	z.Sro.BPEType = "SRO"
-	z.Sro.CableIn = node.NewCable("Aduction")
+	z.Sro.TronconIn = node.NewTroncon("Aduction")
 	return z
 }
 
 const (
 	blobpattern string = `*PT*.xlsx`
 )
-
-func (z *Zone) GetNodeByPtName(ptname string) *node.Node {
-	for _, n := range z.Nodes {
-		if n.PtName == ptname {
-			return n
-		}
-	}
-	return nil
-}
 
 func (z *Zone) ParseBPEDir(dir string) error {
 	parseBlobPattern := filepath.Join(dir, blobpattern)
@@ -52,17 +46,108 @@ func (z *Zone) ParseBPEDir(dir string) error {
 		if strings.HasPrefix(filepath.Base(f), "~") {
 			continue
 		}
-		n := node.NewNode()
 		fname := filepath.Base(f)
 		_ = fname
-		err := n.ParseBPEXLS(f)
+		n, err := z.ParseBPEXLS(f)
 		if err != nil {
 			return fmt.Errorf("parsing '%s' returned error : %s\n", filepath.Base(f), err.Error())
 		}
 		fmt.Printf("'%s' parsed\n", n.PtName)
-		z.Nodes = append(z.Nodes, n)
+		z.Nodes.Add(n)
 	}
+
 	return nil
+}
+
+const (
+	rowBpePtName = 1
+	colBpePtName = 8
+	rowBPEType   = 4
+	colBPEType   = 1
+	rowAddress   = 2
+	colAddress   = 8
+
+	colFiberNumIn   = 11
+	colFiberNumOut  = 19
+	colCableNameIn  = 3
+	colCableNameOut = 24
+	colOperation    = 13
+	colTubulure     = 17
+	colCableDict    = 18
+)
+
+func (z *Zone) ParseBPEXLS(file string) (*node.Node, error) {
+	xls, err := xlsx.OpenFile(file)
+	if err != nil {
+		return nil, err
+	}
+
+	sheet := xls.Sheets[0]
+	if !strings.HasPrefix(sheet.Name, "Plan ") {
+		return nil, fmt.Errorf("Unexpected Sheet name: '%s'", sheet.Name)
+	}
+
+	// n.Name
+	n := node.NewNode()
+	n.PtName = sheet.Cell(rowBpePtName, colBpePtName).Value
+	n.BPEType = sheet.Cell(rowBPEType, colBPEType).Value
+	// n.LocationType
+	n.Address = sheet.Cell(rowAddress, colAddress).Value
+
+	var tronconIn, tronconOut string
+	var CableDictZone bool
+	// Scan all fiber info rows
+	for row := 9; row < sheet.MaxRow; row++ {
+		if CableDictZone {
+			tronconInfo := sheet.Cell(row, colCableDict).Value
+			if tronconInfo == "" {
+				continue
+			}
+			infos := strings.Split(tronconInfo, "-")
+			if len(infos) < 2 {
+				return nil, fmt.Errorf("could not parse Troncon Info line %d : '%s'", row+1, tronconInfo)
+			}
+			nt := node.NewTroncon(infos[1])
+			capa := strings.Split(infos[0], " ")[0]
+			nbFo, err := strconv.ParseInt(capa, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("could not parse Troncon Capa Info line %d : %s", row+1, err.Error())
+			}
+			nt.Capa = int(nbFo)
+			n.TronconsOut[infos[1]] = nt
+			continue
+		}
+		fiberIn := sheet.Cell(row, colFiberNumIn).Value
+		fiberOut := sheet.Cell(row, colFiberNumOut).Value
+		ope := sheet.Cell(row, colOperation).Value
+		nTronconIn := sheet.Cell(row, colCableNameIn).Value
+		if nTronconIn != "" && tronconIn != nTronconIn {
+			if n.TronconIn != nil {
+				return nil, fmt.Errorf("multiple Troncon In found line %d : %s", row+1, err.Error())
+			}
+			tronconIn = nTronconIn
+			n.TronconIn = z.Troncons.Get(tronconIn)
+			n.TronconIn.NodeDest = n
+		}
+		nTronconOut := sheet.Cell(row, colCableNameOut).Value
+		if nTronconOut != "" && tronconOut != nTronconOut {
+			tronconOut = nTronconOut
+			tro := z.Troncons.Get(tronconOut)
+			tro.NodeSource = n
+			n.TronconsOut[tronconOut] = tro
+		}
+
+		if fiberIn != "" || fiberOut != "" { // Input or Output Troncon info available, process it
+			n.AddOperation(tronconIn, ope, fiberOut, tronconOut)
+		}
+
+		tube := sheet.Cell(row, colTubulure).Value
+		if strings.HasPrefix(tube, "Affectation des") {
+			CableDictZone = true
+			row += 2
+		}
+	}
+	return n, nil
 }
 
 func (z *Zone) WriteXLS(dir, name string) error {
@@ -78,7 +163,7 @@ func (z *Zone) WriteXLS(dir, name string) error {
 		return err
 	}
 
-	z.Nodes[0].WriteHeader(sheet)
+	node.NewNode().WriteHeader(sheet)
 
 	if len(z.Sro.Children) > 0 {
 		z.Sro.WriteXLS(sheet)
@@ -123,16 +208,16 @@ func (z *Zone) ParseROPXLS(file string) error {
 }
 
 func (z *Zone) CreateBPETree() {
-	// Create Cable list with source / dest node
+	// Create Troncon list with source / dest node
 	cables := map[string]Link{}
 	for _, nod := range z.Nodes {
-		if nod.CableIn != nil && nod.CableIn.Name != "" {
-			link := cables[nod.CableIn.Name]
+		if nod.TronconIn != nil && nod.TronconIn.Name != "" {
+			link := cables[nod.TronconIn.Name]
 			link.Dest = nod
-			cables[nod.CableIn.Name] = link
+			cables[nod.TronconIn.Name] = link
 		}
-		for cableName, cable := range nod.CablesOut {
-			if nod.CableIn != nil && nod.CableIn.Name == cable.Name {
+		for cableName, cable := range nod.TronconsOut {
+			if nod.TronconIn != nil && nod.TronconIn.Name == cable.Name {
 				continue
 			}
 			link := cables[cableName]
@@ -147,7 +232,7 @@ func (z *Zone) CreateBPETree() {
 				link.Source.Children = append(link.Source.Children, link.Dest)
 				link.Dest.IsChild = true
 			} else {
-				link.Source.AddPMChild(link.Source.CablesOut[cableName])
+				link.Source.AddPMChild(link.Source.TronconsOut[cableName])
 			}
 		}
 	}
@@ -156,7 +241,7 @@ func (z *Zone) CreateBPETree() {
 		if nod.IsChild {
 			continue
 		}
-		if nod.CableIn != nil && nod.CableIn.Name != "" {
+		if nod.TronconIn != nil && nod.TronconIn.Name != "" {
 			z.NodeRoots = append(z.NodeRoots, node.NewPMNode(nod))
 		} else {
 			z.NodeRoots = append(z.NodeRoots, nod)

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/tealeg/xlsx"
 	"sort"
-	"strconv"
 	"strings"
 )
 
@@ -16,8 +15,9 @@ type Node struct {
 	Address      string // 0, FERME DU TOUPET AZOUDANGE (2,8)
 	DistFromPM   int
 
-	CableIn   *Cable
-	CablesOut Cables
+	TronconIn   *Troncon
+	TronconsOut Troncons
+	Operation   map[string]int
 
 	Children []*Node
 	IsChild  bool
@@ -25,7 +25,8 @@ type Node struct {
 
 func NewNode() *Node {
 	n := &Node{
-		CablesOut: NewCables(),
+		TronconsOut: NewTroncons(),
+		Operation:   map[string]int{},
 	}
 	return n
 }
@@ -37,39 +38,41 @@ func NewPMNode(child *Node) *Node {
 	pm.BPEType = "PM"
 	pm.LocationType = "PM"
 	//pm.Address = ""
-	//pm.CableIn = nil
-	if child != nil && child.CableIn.Name != "" {
+	//pm.TronconIn = nil
+	if child != nil && child.TronconIn.Name != "" {
 		pm.Children = []*Node{child}
 		//pm.IsChild = false
 		child.IsChild = true
 
-		cableIn := NewCable("")
-		cableIn.Operation["Epissure->"+child.CableIn.Name] = child.CableIn.Capa
-		pm.CableIn = cableIn
-		pm.CablesOut[""] = cableIn
-		cableOut := NewCable(child.CableIn.Name)
-		cableOut.Capa = child.CableIn.Capa
-		pm.CablesOut[child.CableIn.Name] = cableOut
+		tronconIn := NewTroncon("")
+		pm.Operation["Epissure->"+child.TronconIn.Name] = child.TronconIn.Capa
+		pm.TronconIn = tronconIn
+		pm.TronconsOut[""] = tronconIn
+		tronconOut := NewTroncon(child.TronconIn.Name)
+		tronconOut.Capa = child.TronconIn.Capa
+		pm.TronconsOut[child.TronconIn.Name] = tronconOut
 	}
 	return pm
 }
 
-const (
-	rowPtName  = 1
-	colPtName  = 8
-	rowBPEType = 4
-	colBPEType = 1
-	rowAddress = 2
-	colAddress = 8
+func (n *Node) AddOperation(tronconIn, ope, fiberOut, tronconOut string) {
+	if ope == "Love" || ope == "" {
+		return
+	}
+	if tronconIn != "" {
+		n.TronconIn.Capa++
+	}
 
-	colFiberNumIn   = 11
-	colFiberNumOut  = 19
-	colCableNameIn  = 3
-	colCableNameOut = 24
-	colOperation    = 13
-	colTubulure     = 17
-	colCableDict    = 18
-)
+	key := strings.Title(strings.ToLower(ope))
+	if fiberOut != "" {
+		if tronconIn == "" {
+			key += "<-" + tronconOut
+		} else {
+			key += "->" + tronconOut
+		}
+	}
+	n.Operation[key]++
+}
 
 func (n *Node) AddChild(cn *Node) {
 	for _, cc := range n.Children {
@@ -80,9 +83,9 @@ func (n *Node) AddChild(cn *Node) {
 	n.Children = append(n.Children, cn)
 }
 
-func (n *Node) AddPMChild(cable *Cable) {
+func (n *Node) AddPMChild(cable *Troncon) {
 	cpm := NewPMNode(nil)
-	cpm.CableIn = cable
+	cpm.TronconIn = cable
 	n.Children = append(n.Children, cpm)
 }
 
@@ -93,88 +96,47 @@ func (n *Node) GetChildren() []*Node {
 	return n.Children
 }
 
-func (n *Node) ParseBPEXLS(file string) error {
-	xls, err := xlsx.OpenFile(file)
-	if err != nil {
-		return err
+func (n *Node) Operations() []string {
+	res := []string{}
+	for ope, _ := range n.Operation {
+		res = append(res, ope)
 	}
-
-	sheet := xls.Sheets[0]
-	if !strings.HasPrefix(sheet.Name, "Plan ") {
-		return fmt.Errorf("Unexpected Sheet name: '%s'", sheet.Name)
-	}
-
-	// n.Name
-	n.PtName = sheet.Cell(rowPtName, colPtName).Value
-	n.BPEType = sheet.Cell(rowBPEType, colBPEType).Value
-	// n.LocationType
-	n.Address = sheet.Cell(rowAddress, colAddress).Value
-
-	var cableIn, cableOut string
-	var CableDict bool
-	cableIns := NewCables()
-	// Scan all fiber info rows
-	for row := 9; row < sheet.MaxRow; row++ {
-		if CableDict {
-			cableInfo := sheet.Cell(row, colCableDict).Value
-			if cableInfo == "" {
-				continue
-			}
-			infos := strings.Split(cableInfo, "-")
-			if len(infos) < 2 {
-				return fmt.Errorf("could not parse Cable Info line %d : '%s'", row+1, cableInfo)
-			}
-			nc := NewCable(infos[1])
-			capa := strings.Split(infos[0], " ")[0]
-			nbFo, err := strconv.ParseInt(capa, 10, 64)
-			if err != nil {
-				return fmt.Errorf("could not parse Cable Info line %d : %s", row+1, err.Error())
-			}
-			nc.Capa = int(nbFo)
-			n.CablesOut[infos[1]] = nc
-			continue
-		}
-		fiberIn := sheet.Cell(row, colFiberNumIn).Value
-		fiberOut := sheet.Cell(row, colFiberNumOut).Value
-		ope := sheet.Cell(row, colOperation).Value
-		ncableIn := sheet.Cell(row, colCableNameIn).Value
-		if ncableIn != "" {
-			cableIn = ncableIn
-		}
-		ncableOut := sheet.Cell(row, colCableNameOut).Value
-		if ncableOut != "" {
-			cableOut = ncableOut
-		}
-		tube := sheet.Cell(row, colTubulure).Value
-
-		if fiberIn != "" || fiberOut != "" { // Input or Output Cable info available, process it
-			cableIns.Add(cableIn, ope, fiberOut, cableOut)
-		}
-
-		if strings.HasPrefix(tube, "Affectation des") {
-			CableDict = true
-			row += 2
-		}
-	}
-
-	if len(cableIns) == 0 {
-		return fmt.Errorf("could not find cable In info")
-	}
-	for _, cable := range cableIns {
-		if len(cable.Operation) > 0 {
-			if n.CableIn != nil {
-				return fmt.Errorf("could not define unique cable In info")
-			}
-			n.CableIn = cable
-		}
-	}
-	return nil
+	sort.Strings(res)
+	return res
 }
 
-func (n *Node) String(co Cables) string {
+func (n *Node) String(co Troncons) string {
 	res := ""
-	res += fmt.Sprintf("%s : cableIn=%s", n.PtName, n.CableIn.String(n.CablesOut))
+	res += fmt.Sprintf("%s : cableIn=%s", n.PtName, n.TronconIn.String(n.TronconsOut))
+	for _, ope := range n.Operations() {
+		if !strings.Contains(ope, "->") {
+			res += fmt.Sprintf("\n\t%s : %d", ope, n.Operation[ope])
+			continue
+		}
+		cname := strings.Split(ope, "->")[1]
+		res += fmt.Sprintf("\n\t%s (%s): %d", ope, co[cname].CapaString(), n.Operation[ope])
+	}
 	return res
+}
+
+func (n *Node) GetNumbers() (nbEpi, nbOther int) {
+	for ope, _ := range n.Operation {
+		e, o := n.GetOperationNumbers(ope)
+		nbEpi += e
+		nbOther += o
+	}
+	return
+}
+
+func (n *Node) GetOperationNumbers(ope string) (nbEpi, nbOther int) {
+	lope := strings.ToLower(ope)
+	switch {
+	case strings.HasPrefix(lope, "epissure"):
+		nbEpi += n.Operation[ope]
+	default:
+		nbOther += n.Operation[ope]
+	}
+	return
 }
 
 func (n *Node) Tree(prefix, header string, level int) string {
@@ -197,7 +159,7 @@ func (n *Node) WriteHeader(xs *xlsx.Sheet) {
 		{"Type Boitier", 15},
 		{"Type Site", 17},
 		{"Ref Site", 10},
-		{"Cable entrant", 15},
+		{"Troncon entrant", 15},
 		{"Taille", 8},
 		{"Opérations", 20},
 		{"Nb Fibre Sortant", 15},
@@ -233,12 +195,12 @@ const (
 
 func (n *Node) WriteXLS(xs *xlsx.Sheet) {
 	n.writeSiteInfo(xs.AddRow())
-	for _, opname := range n.CableIn.Operations() {
+	for _, opname := range n.Operations() {
 		r := xs.AddRow()
 		n.writeSitePrefix(r)
 		r.AddCell().SetString(n.GetOperationCapa(opname))
 		r.AddCell().SetString(opname)
-		epi, other := n.CableIn.GetOperationNumbers(opname)
+		epi, other := n.GetOperationNumbers(opname)
 		r.AddCell().SetInt(other + epi)
 		r.AddCell().SetInt(epi)
 
@@ -285,8 +247,8 @@ func (n *Node) writeSiteInfo(r *xlsx.Row) {
 	//r.AddCell().SetString(n.LocationType) // attribute not set at parse time ... use business rule to assert value instead
 	r.AddCell().SetString(locationType)
 	r.AddCell().SetString(n.Name)
-	r.AddCell().SetString(n.CableIn.Name)
-	r.AddCell().SetString(n.CableIn.CapaString())
+	r.AddCell().SetString(n.TronconIn.Name)
+	r.AddCell().SetString(n.TronconIn.CapaString())
 	r.AddCell().SetString("TOTAL")
 	r.AddCell().SetInt(other + epi)
 	r.AddCell().SetInt(epi)
@@ -297,10 +259,6 @@ func (n *Node) writeSiteInfo(r *xlsx.Row) {
 	for i := 0; i < nbCol; i++ {
 		r.Cells[i].SetStyle(st)
 	}
-}
-
-func (n *Node) GetNumbers() (nbEpi, nbOther int) {
-	return n.CableIn.GetNumbers()
 }
 
 func (n *Node) writeSitePrefix(r *xlsx.Row) {
@@ -314,15 +272,15 @@ func (n *Node) GetOperationCapa(ope string) string {
 		return ""
 	}
 	cname := strings.Split(ope, "->")[1]
-	return n.CablesOut[cname].CapaString()
+	return n.TronconsOut[cname].CapaString()
 }
 
 func (n *Node) SetOperationFromChildren() {
 	for _, cn := range n.Children {
-		n.CableIn.Capa += cn.CableIn.Capa
-		key := "Epissure->" + cn.CableIn.Name
-		n.CableIn.Operation[key] = cn.CableIn.Capa
+		n.TronconIn.Capa += cn.TronconIn.Capa
+		key := "Epissure->" + cn.TronconIn.Name
+		n.Operation[key] = cn.TronconIn.Capa
 
-		n.CablesOut[cn.CableIn.Name] = cn.CableIn
+		n.TronconsOut[cn.TronconIn.Name] = cn.TronconIn
 	}
 }

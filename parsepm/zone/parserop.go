@@ -65,13 +65,13 @@ func (rp *RopParser) ChildExists() bool {
 	return false
 }
 
-// SetNodeInfo sets node Name and check CableIn consistency
+// SetNodeInfo sets node Name and check TronconIn consistency
 func (rp *RopParser) SetNodeInfo(n *node.Node) {
 	n.Name = rp.GetValue(colName)
 	// check cable In consistency
 	cableInName := rp.GetValue(colCableIn)
-	if cableInName != n.CableIn.Name {
-		rp.debug(fmt.Sprintf("not matching cable In name '%s' ('%s' expected) for node '%s'", cableInName, n.CableIn.Name, n.PtName))
+	if cableInName != n.TronconIn.Name {
+		rp.debug(fmt.Sprintf("not matching cable In name '%s' ('%s' expected) for node '%s'", cableInName, n.TronconIn.Name, n.PtName))
 	}
 }
 
