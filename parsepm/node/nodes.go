@@ -1,16 +1,16 @@
 package node
 
-import "gopkg.in/src-d/go-vitess.v1/vt/log"
-
 type Nodes map[string]*Node
 
 func NewNodes() Nodes {
 	return make(map[string]*Node)
 }
 
-func (ns Nodes) Add(n *Node) {
-	if _, found := ns[n.PtName]; found {
-		log.Fatal("adding already existing node %s", n.PtName)
+func (ns Nodes) Add(n *Node) (new bool) {
+	_, found := ns[n.PtName]
+	if !found {
+		ns[n.PtName] = n
+		return true
 	}
-	ns[n.PtName] = n
+	return false
 }

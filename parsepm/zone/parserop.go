@@ -6,6 +6,7 @@ import (
 	"github.com/tealeg/xlsx"
 	"gopkg.in/src-d/go-vitess.v1/vt/log"
 	"strconv"
+	"strings"
 )
 
 type Pos struct {
@@ -24,11 +25,17 @@ type RopParser struct {
 }
 
 const (
-	colCableIn    int = 2
-	colName       int = 4
-	colPtName     int = 5
-	colDistFromPM int = 6
-	colNextBlock  int = 8
+	acolPmName     int = 0
+	acolDrawer     int = 3
+	acolDrawerLine int = 4
+	acolDrawerCol  int = 5
+	colTubulure    int = 0
+	colCableIn     int = 2
+	colName        int = 4
+	colPtName      int = 5
+	colDistFromPM  int = 6
+	colOpe         int = 7
+	colNextBlock   int = 8
 )
 
 func NewRopParser(sh *xlsx.Sheet, zone *Zone) *RopParser {
@@ -51,6 +58,14 @@ func (rp *RopParser) GetChildRopParser() *RopParser {
 
 func (rp *RopParser) GetPosValue(row, col int) string {
 	return rp.sheet.Cell(row, col).Value
+}
+
+func (rp *RopParser) GetPosInt(row, col int) int {
+	i, err := rp.sheet.Cell(row, col).Int()
+	if err != nil {
+		i = 0
+	}
+	return i
 }
 
 func (rp *RopParser) GetValue(colOffset int) string {
@@ -76,9 +91,16 @@ func (rp *RopParser) SetNodeInfo(n *node.Node) {
 }
 
 func (rp *RopParser) ParseRop() {
+	rp.pos = Pos{1, 6}
+	// Init root PM Node
+	rp.zone.Sro.PtName = rp.GetPosValue(rp.pos.row, acolPmName)
+	rp.zone.Sro.LocationType = "PM"
+	rp.zone.Nodes.Add(rp.zone.Sro)
+
+	// Start Parsing
 	done := false
 	for !done {
-		if rp.GetValue(0) != "" {
+		if rp.GetValue(colTubulure) != "" {
 			topnode := rp.Parse()
 			rp.zone.Sro.AddChild(topnode)
 			continue
@@ -95,7 +117,7 @@ func (rp *RopParser) ParseRop() {
 // Parse returns current block Node (populated with all its defined children) and move RopParser pos to the next child within same level
 func (rp *RopParser) Parse() *node.Node {
 	ptName := rp.GetValue(colPtName)
-	currentNode := rp.zone.GetNodeByPtName(ptName)
+	currentNode := rp.zone.Nodes[ptName]
 	if currentNode == nil {
 		rp.debug(fmt.Sprintf("could not get node from ptname '%s'", ptName))
 	}
@@ -116,6 +138,14 @@ func (rp *RopParser) Parse() *node.Node {
 			}
 			rp.pos.row = crp.pos.row
 		} else {
+			if rp.GetValue(colOpe) == "ATTENTE" {
+				drawer := fmt.Sprintf("%s/%s/%02d",
+					strings.TrimPrefix(rp.GetPosValue(rp.pos.row, acolDrawer), rp.zone.Sro.PtName+"_"),
+					rp.GetPosValue(rp.pos.row, acolDrawerLine),
+					rp.GetPosInt(rp.pos.row, acolDrawerCol),
+				)
+				currentNode.AddDrawerInfo(drawer)
+			}
 			rp.pos.row++
 		}
 		// test if pos is still in same Node

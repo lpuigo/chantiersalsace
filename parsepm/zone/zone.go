@@ -6,7 +6,6 @@ import (
 	"github.com/tealeg/xlsx"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -46,108 +45,19 @@ func (z *Zone) ParseBPEDir(dir string) error {
 		if strings.HasPrefix(filepath.Base(f), "~") {
 			continue
 		}
-		fname := filepath.Base(f)
-		_ = fname
-		n, err := z.ParseBPEXLS(f)
+		n := node.NewNode()
+		err := n.ParseBPEXLS(f, z.Troncons)
 		if err != nil {
 			return fmt.Errorf("parsing '%s' returned error : %s\n", filepath.Base(f), err.Error())
 		}
 		fmt.Printf("'%s' parsed\n", n.PtName)
-		z.Nodes.Add(n)
+		newNode := z.Nodes.Add(n)
+		if !newNode {
+			return fmt.Errorf("node %s was already defined", n.PtName)
+		}
 	}
 
 	return nil
-}
-
-const (
-	rowBpePtName = 1
-	colBpePtName = 8
-	rowBPEType   = 4
-	colBPEType   = 1
-	rowAddress   = 2
-	colAddress   = 8
-
-	colFiberNumIn   = 11
-	colFiberNumOut  = 19
-	colCableNameIn  = 3
-	colCableNameOut = 24
-	colOperation    = 13
-	colTubulure     = 17
-	colCableDict    = 18
-)
-
-func (z *Zone) ParseBPEXLS(file string) (*node.Node, error) {
-	xls, err := xlsx.OpenFile(file)
-	if err != nil {
-		return nil, err
-	}
-
-	sheet := xls.Sheets[0]
-	if !strings.HasPrefix(sheet.Name, "Plan ") {
-		return nil, fmt.Errorf("Unexpected Sheet name: '%s'", sheet.Name)
-	}
-
-	// n.Name
-	n := node.NewNode()
-	n.PtName = sheet.Cell(rowBpePtName, colBpePtName).Value
-	n.BPEType = sheet.Cell(rowBPEType, colBPEType).Value
-	// n.LocationType
-	n.Address = sheet.Cell(rowAddress, colAddress).Value
-
-	var tronconIn, tronconOut string
-	var CableDictZone bool
-	// Scan all fiber info rows
-	for row := 9; row < sheet.MaxRow; row++ {
-		if CableDictZone {
-			tronconInfo := sheet.Cell(row, colCableDict).Value
-			if tronconInfo == "" {
-				continue
-			}
-			infos := strings.Split(tronconInfo, "-")
-			if len(infos) < 2 {
-				return nil, fmt.Errorf("could not parse Troncon Info line %d : '%s'", row+1, tronconInfo)
-			}
-			nt := node.NewTroncon(infos[1])
-			capa := strings.Split(infos[0], " ")[0]
-			nbFo, err := strconv.ParseInt(capa, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("could not parse Troncon Capa Info line %d : %s", row+1, err.Error())
-			}
-			nt.Capa = int(nbFo)
-			n.TronconsOut[infos[1]] = nt
-			continue
-		}
-		fiberIn := sheet.Cell(row, colFiberNumIn).Value
-		fiberOut := sheet.Cell(row, colFiberNumOut).Value
-		ope := sheet.Cell(row, colOperation).Value
-		nTronconIn := sheet.Cell(row, colCableNameIn).Value
-		if nTronconIn != "" && tronconIn != nTronconIn {
-			if n.TronconIn != nil {
-				return nil, fmt.Errorf("multiple Troncon In found line %d : %s", row+1, err.Error())
-			}
-			tronconIn = nTronconIn
-			n.TronconIn = z.Troncons.Get(tronconIn)
-			n.TronconIn.NodeDest = n
-		}
-		nTronconOut := sheet.Cell(row, colCableNameOut).Value
-		if nTronconOut != "" && tronconOut != nTronconOut {
-			tronconOut = nTronconOut
-			tro := z.Troncons.Get(tronconOut)
-			tro.NodeSource = n
-			n.TronconsOut[tronconOut] = tro
-		}
-
-		if fiberIn != "" || fiberOut != "" { // Input or Output Troncon info available, process it
-			n.AddOperation(tronconIn, ope, fiberOut, tronconOut)
-		}
-
-		tube := sheet.Cell(row, colTubulure).Value
-		if strings.HasPrefix(tube, "Affectation des") {
-			CableDictZone = true
-			row += 2
-		}
-	}
-	return n, nil
 }
 
 func (z *Zone) WriteXLS(dir, name string) error {
@@ -158,19 +68,14 @@ func (z *Zone) WriteXLS(dir, name string) error {
 
 	xlsx.SetDefaultFont(11, "Calibri")
 	xls := xlsx.NewFile()
-	sheet, err := xls.AddSheet(name)
+
+	err := z.addRaccoSheet(xls)
 	if err != nil {
-		return err
+		return fmt.Errorf("Racco : %s", err.Error())
 	}
-
-	node.NewNode().WriteHeader(sheet)
-
-	if len(z.Sro.Children) > 0 {
-		z.Sro.WriteXLS(sheet)
-	} else {
-		for _, rootnode := range z.NodeRoots {
-			rootnode.WriteXLS(sheet)
-		}
+	err = z.addMesuresSheet(xls)
+	if err != nil {
+		return fmt.Errorf("Mesures : %s", err.Error())
 	}
 
 	of, err := os.Create(file)
@@ -180,6 +85,35 @@ func (z *Zone) WriteXLS(dir, name string) error {
 	defer of.Close()
 
 	return xls.Write(of)
+}
+
+func (z *Zone) addRaccoSheet(xls *xlsx.File) error {
+	sheet, err := xls.AddSheet("Racco")
+	if err != nil {
+		return err
+	}
+
+	node.NewNode().WriteRaccoHeader(sheet)
+
+	if len(z.Sro.Children) > 0 {
+		z.Sro.WriteRaccoXLS(sheet)
+	} else {
+		for _, rootnode := range z.NodeRoots {
+			rootnode.WriteRaccoXLS(sheet)
+		}
+	}
+	return nil
+}
+
+func (z *Zone) addMesuresSheet(xls *xlsx.File) error {
+	sheet, err := xls.AddSheet("Mesures")
+	if err != nil {
+		return err
+	}
+
+	node.NewNode().WriteMesuresHeader(sheet)
+	z.Sro.WriteMesuresXLS(sheet)
+	return nil
 }
 
 func (z *Zone) ParseROPXLS(file string) error {
@@ -192,6 +126,7 @@ func (z *Zone) ParseROPXLS(file string) error {
 	for _, sh := range xls.Sheets {
 		if strings.HasPrefix(sh.Name, "TAB") {
 			sheet = sh
+			break
 		}
 	}
 	if sheet == nil {
@@ -200,7 +135,6 @@ func (z *Zone) ParseROPXLS(file string) error {
 
 	//parse sheet
 	rp := NewRopParser(sheet, z)
-	rp.pos = Pos{1, 6}
 
 	rp.ParseRop()
 

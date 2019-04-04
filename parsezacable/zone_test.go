@@ -69,7 +69,7 @@ func TestZone_WriteXLS(t *testing.T) {
 
 	err = zone.WriteXLS(testresultfile)
 	if err != nil {
-		t.Fatal("zone.WriteXLS returns:", err)
+		t.Fatal("zone.WriteRaccoXLS returns:", err)
 	}
 }
 
@@ -85,6 +85,6 @@ func TestZone_ParseBlob(t *testing.T) {
 	resfile := filepath.Join(testdir, zoneName+"_suivi.xlsx")
 	err = zone.WriteXLS(resfile)
 	if err != nil {
-		t.Fatal("zone.WriteXLS returns:", err)
+		t.Fatal("zone.WriteRaccoXLS returns:", err)
 	}
 }
