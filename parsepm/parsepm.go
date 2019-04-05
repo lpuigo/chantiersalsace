@@ -5,25 +5,32 @@ import (
 	"github.com/lpuig/ewin/chantiersalsace/parsepm/zone"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 const (
-	testDir     string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM03\`
-	testBPEDir  string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM03\CCAM_KED_PM03_BPE`
-	testROPXlsx string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM03\CCAM_KED_PM03_ROP\CCAM_KED_PM03_ROP.xlsx`
-	testXLS     string = `KED_PM03`
+	testDir     string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\JTestevuide - DESSELING PM3\Infos PM3`
+	testBPEDir  string = `CCPE_DES_PM3_BPE`
+	testROPXlsx string = `CCPE_DES_PM3_ROP\CCPE_DES_PM3_ROP.xlsx`
+	testXLS     string = `DES_PM3`
+	//testDir     string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM03\`
+	//testBPEDir  string = `CCAM_KED_PM03_BPE`
+	//testROPXlsx string = `CCAM_KED_PM03_ROP\CCAM_KED_PM03_ROP.xlsx`
+	//testXLS     string = `KED_PM03`
 )
 
 func main() {
+
 	pm := zone.New()
-	err := pm.ParseBPEDir(testBPEDir)
+	err := pm.ParseBPEDir(filepath.Join(testDir, testBPEDir))
 	if err != nil {
 		log.Fatal("could not parse BPE Directory:", err)
 	}
 
-	if exists(testROPXlsx) {
+	ropFile := filepath.Join(testDir, testROPXlsx)
+	if exists(ropFile) {
 		// If ROP File exist, parse it to create BPE Tree
-		err = pm.ParseROPXLS(testROPXlsx)
+		err = pm.ParseROPXLS(ropFile)
 		if err != nil {
 			log.Fatal("could not parse ROP file:", err)
 		}

@@ -236,12 +236,14 @@ func (n *Node) ParseBPEXLS(file string, troncons Troncons) error {
 		ope := sheet.Cell(row, colOperation).Value
 		nTronconIn := sheet.Cell(row, colCableNameIn).Value
 		if nTronconIn != "" && tronconIn != nTronconIn {
-			if n.TronconIn != nil {
-				return fmt.Errorf("multiple Troncon In found line %d : %s", row+1, err.Error())
+			if !(ope == "Love" && fiberIn != "" && fiberOut != "") {
+				if n.TronconIn != nil {
+					return fmt.Errorf("multiple Troncon In found line %d : %s", row+1, nTronconIn)
+				}
+				tronconIn = nTronconIn
+				n.TronconIn = troncons.Get(tronconIn)
+				n.TronconIn.NodeDest = n
 			}
-			tronconIn = nTronconIn
-			n.TronconIn = troncons.Get(tronconIn)
-			n.TronconIn.NodeDest = n
 		}
 		nTronconOut := sheet.Cell(row, colCableNameOut).Value
 		if nTronconOut != "" && tronconOut != nTronconOut {
