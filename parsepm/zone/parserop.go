@@ -112,6 +112,8 @@ func (rp *RopParser) ParseRop() {
 		rp.pos.row++
 	}
 	rp.zone.Sro.SetOperationFromChildren()
+	rp.zone.Sro.SetSplicePTs()
+	rp.zone.DetectCables(rp.zone.Sro)
 }
 
 // Parse returns current block Node (populated with all its defined children) and move RopParser pos to the next child within same level
@@ -139,12 +141,15 @@ func (rp *RopParser) Parse() *node.Node {
 			rp.pos.row = crp.pos.row
 		} else {
 			if rp.GetValue(colOpe) == "ATTENTE" {
-				drawer := fmt.Sprintf("%s/%s/%02d",
-					strings.TrimPrefix(rp.GetPosValue(rp.pos.row, acolDrawer), rp.zone.Sro.PtName+"_"),
+				drawer := rp.GetPosValue(rp.pos.row, acolDrawer)
+				parts := strings.Split(drawer, "_")
+				drawerSuffix := strings.Join(parts[len(parts)-2:], "_")
+				drawerInfo := fmt.Sprintf("%s/%s/%02d",
+					drawerSuffix,
 					rp.GetPosValue(rp.pos.row, acolDrawerLine),
 					rp.GetPosInt(rp.pos.row, acolDrawerCol),
 				)
-				currentNode.AddDrawerInfo(drawer)
+				currentNode.AddDrawerInfo(drawerInfo)
 			}
 			rp.pos.row++
 		}

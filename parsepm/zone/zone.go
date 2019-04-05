@@ -12,6 +12,7 @@ import (
 type Zone struct {
 	Nodes     node.Nodes
 	Troncons  node.Troncons
+	Cables    node.Cables
 	Sro       *node.Node
 	NodeRoots []*node.Node
 }
@@ -112,7 +113,7 @@ func (z *Zone) addMesuresSheet(xls *xlsx.File) error {
 	}
 
 	node.NewNode().WriteMesuresHeader(sheet)
-	z.Sro.WriteMesuresXLS(sheet)
+	z.Sro.WriteMesuresXLS(sheet, z.Nodes)
 	return nil
 }
 
@@ -180,5 +181,26 @@ func (z *Zone) CreateBPETree() {
 		} else {
 			z.NodeRoots = append(z.NodeRoots, nod)
 		}
+	}
+}
+
+func (z *Zone) DetectCables(node *node.Node) {
+	for _, tr := range node.SpliceTRs() {
+		z.AddNewCable(tr)
+	}
+}
+
+func (z *Zone) AddNewCable(tr *node.Troncon) {
+	nc := node.NewCable(tr)
+	z.Cables.Add(nc)
+	for tr != nil {
+		nc.AddTroncon(tr, 20)
+
+		// detect new cable starting in dest node
+		nextNode := tr.NodeDest
+		z.DetectCables(nextNode)
+
+		// check for passage
+		tr = nextNode.GetTronconPassage()
 	}
 }

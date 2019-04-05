@@ -22,6 +22,7 @@ type Node struct {
 
 	StartDrawer string
 	EndDrawer   string
+	SplicePT    []string
 
 	Children []*Node
 	IsChild  bool
@@ -292,6 +293,53 @@ func (n *Node) SetOperationFromChildren() {
 	}
 }
 
+func (n *Node) SetSplicePTs(splicePT ...string) {
+	if n.GetWaitingFiber() > 0 {
+		n.SplicePT = splicePT
+	}
+	splicedChildren := n.getSplicedChildren()
+	for _, cnode := range n.Children {
+		nSplicePT := splicePT
+		if splicedChildren[cnode.PtName] {
+			nSplicePT = append(nSplicePT, n.PtName)
+		}
+		cnode.SetSplicePTs(nSplicePT...)
+	}
+}
+
+func (n *Node) getSplicedChildren() map[string]bool {
+	res := map[string]bool{}
+	for ope, _ := range n.Operation {
+		if strings.HasPrefix(ope, "Epissure->") {
+			res[n.TronconsOut[strings.TrimPrefix(ope, "Epissure->")].NodeDest.PtName] = true
+		}
+	}
+	return res
+}
+
+// SpliceTRs returns slice of next Troncons with Epissure operation (empty slice if not found)
+func (n *Node) SpliceTRs() []*Troncon {
+	res := []*Troncon{}
+	for ope, _ := range n.Operation {
+		if strings.HasPrefix(ope, "Epissure->") {
+			res = append(res, n.TronconsOut[strings.TrimPrefix(ope, "Epissure->")])
+		}
+	}
+	return res
+}
+
+// GetTronconPassage returns next Troncon with Passage operation, or nil if not found
+//
+// (unicity is not checked, first troncon found will be returned)
+func (n *Node) GetTronconPassage() *Troncon {
+	for ope, _ := range n.Operation {
+		if strings.HasPrefix(ope, "Passage->") {
+			return n.TronconsOut[strings.TrimPrefix(ope, "Passage->")]
+		}
+	}
+	return nil
+}
+
 type col struct {
 	title string
 	width float64
@@ -335,14 +383,15 @@ const (
 	coldefault      string = "ffff8800"
 	colError        string = "ffff0000"
 
-	nbCol int = 10
+	nbColRacco   int = 10
+	nbColMeasure int = 6
 )
 
 func (n *Node) WriteRaccoXLS(xs *xlsx.Sheet) {
 	n.writeSiteRaccoInfo(xs.AddRow())
 	for _, opname := range n.Operations() {
 		r := xs.AddRow()
-		n.writeSitePrefix(r)
+		n.writeSitePrefix(r, 6)
 		r.AddCell().SetString(n.GetOperationCapa(opname))
 		r.AddCell().SetString(opname)
 		epi, other := n.GetOperationNumbers(opname)
@@ -389,13 +438,13 @@ func (n *Node) writeSiteRaccoInfo(r *xlsx.Row) {
 	st := xlsx.NewStyle()
 	st.Fill = *xlsx.NewFill("solid", color, "00000000")
 	st.ApplyFill = true
-	for i := 0; i < nbCol; i++ {
+	for i := 0; i < nbColRacco; i++ {
 		r.Cells[i].SetStyle(st)
 	}
 }
 
-func (n *Node) writeSitePrefix(r *xlsx.Row) {
-	for i := 0; i < 6; i++ {
+func (n *Node) writeSitePrefix(r *xlsx.Row, nbCol int) {
+	for i := 0; i < nbCol; i++ {
 		r.AddCell()
 	}
 }
@@ -404,9 +453,10 @@ func (n *Node) WriteMesuresHeader(xs *xlsx.Sheet) {
 	cols := []col{
 		{"PT cible", 12},
 		{"Nb Fibres", 15},
+		{"Nb Episs.", 15},
 		{"Distance", 15},
-		{"Fibres Deb.", 15},
-		{"Fibres Fin.", 15},
+		{"Conn. Deb.", 15},
+		{"Conn. Fin.", 15},
 
 		{"Statut", 15},
 		{"Acteur(s)", 15},
@@ -422,18 +472,47 @@ func (n *Node) WriteMesuresHeader(xs *xlsx.Sheet) {
 	}
 }
 
-func (n *Node) WriteMesuresXLS(xs *xlsx.Sheet) {
+func (n *Node) WriteMesuresXLS(xs *xlsx.Sheet, nodes Nodes) {
 	wf := n.GetWaitingFiber()
 	if wf > 0 {
-		r := xs.AddRow()
-		r.AddCell().SetString(n.PtName)
-		r.AddCell().SetInt(wf)
-		r.AddCell().SetInt(n.DistFromPM)
-		r.AddCell().SetString(n.StartDrawer)
-		r.AddCell().SetString(n.EndDrawer)
+		n.writeMesuresInfo(xs, wf)
+		for i, ptName := range n.SplicePT {
+			pt := nodes[ptName]
+			r := xs.AddRow()
+			n.writeSitePrefix(r, 2)
+			r.AddCell().SetInt(i + 1)
+			r.AddCell().SetInt(pt.DistFromPM)
+			r.AddCell().SetString(ptName)
+			r.AddCell().SetString(pt.Address)
+
+			st := xlsx.NewStyle()
+			st.Font = *xlsx.NewFont(10, "Calibri")
+			st.Font.Color = "FF6F6F6F"
+			st.ApplyFont = true
+			for i := 2; i < nbColMeasure; i++ {
+				r.Cells[i].SetStyle(st)
+			}
+		}
 	}
 
 	for _, cnode := range n.GetChildren() {
-		cnode.WriteMesuresXLS(xs)
+		cnode.WriteMesuresXLS(xs, nodes)
+	}
+}
+
+func (n *Node) writeMesuresInfo(xs *xlsx.Sheet, nbWaiting int) {
+	r := xs.AddRow()
+	r.AddCell().SetString(n.PtName)
+	r.AddCell().SetInt(nbWaiting)
+	r.AddCell().SetInt(len(n.SplicePT))
+	r.AddCell().SetInt(n.DistFromPM)
+	r.AddCell().SetString(n.StartDrawer)
+	r.AddCell().SetString(n.EndDrawer)
+
+	st := xlsx.NewStyle()
+	st.Fill = *xlsx.NewFill("solid", colPM, "00000000")
+	st.ApplyFill = true
+	for i := 0; i < nbColMeasure; i++ {
+		r.Cells[i].SetStyle(st)
 	}
 }
