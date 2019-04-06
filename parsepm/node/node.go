@@ -340,11 +340,6 @@ func (n *Node) GetTronconPassage() *Troncon {
 	return nil
 }
 
-type col struct {
-	title string
-	width float64
-}
-
 func (n *Node) WriteRaccoHeader(xs *xlsx.Sheet) {
 	cols := []col{
 		{"Nom Site", 12},
@@ -364,12 +359,7 @@ func (n *Node) WriteRaccoHeader(xs *xlsx.Sheet) {
 		{"Début", 15},
 		{"Fin", 15},
 	}
-
-	r := xs.AddRow()
-	for i, ci := range cols {
-		r.AddCell().SetString(ci.title)
-		xs.Col(i).Width = ci.width
-	}
+	addHeaderRow(xs, cols)
 }
 
 const (
@@ -391,7 +381,7 @@ func (n *Node) WriteRaccoXLS(xs *xlsx.Sheet) {
 	n.writeSiteRaccoInfo(xs.AddRow())
 	for _, opname := range n.Operations() {
 		r := xs.AddRow()
-		n.writeSitePrefix(r, 6)
+		writeSitePrefix(r, 6)
 		r.AddCell().SetString(n.GetOperationCapa(opname))
 		r.AddCell().SetString(opname)
 		epi, other := n.GetOperationNumbers(opname)
@@ -403,9 +393,7 @@ func (n *Node) WriteRaccoXLS(xs *xlsx.Sheet) {
 		st.Font = *xlsx.NewFont(10, "Calibri")
 		st.Font.Color = "FF6F6F6F"
 		st.ApplyFont = true
-		for i := 6; i < 10; i++ {
-			r.Cells[i].SetStyle(st)
-		}
+		addStyleOnRow(r, st, nbColRacco)
 	}
 
 	for _, cnode := range n.GetChildren() {
@@ -438,15 +426,7 @@ func (n *Node) writeSiteRaccoInfo(r *xlsx.Row) {
 	st := xlsx.NewStyle()
 	st.Fill = *xlsx.NewFill("solid", color, "00000000")
 	st.ApplyFill = true
-	for i := 0; i < nbColRacco; i++ {
-		r.Cells[i].SetStyle(st)
-	}
-}
-
-func (n *Node) writeSitePrefix(r *xlsx.Row, nbCol int) {
-	for i := 0; i < nbCol; i++ {
-		r.AddCell()
-	}
+	addStyleOnRow(r, st, nbColRacco)
 }
 
 func (n *Node) WriteMesuresHeader(xs *xlsx.Sheet) {
@@ -455,8 +435,8 @@ func (n *Node) WriteMesuresHeader(xs *xlsx.Sheet) {
 		{"Nb Fibres", 15},
 		{"Nb Episs.", 15},
 		{"Distance", 15},
-		{"Conn. Deb.", 15},
-		{"Conn. Fin.", 15},
+		{"Conn. Deb.", 20},
+		{"Conn. Fin.", 40},
 
 		{"Statut", 15},
 		{"Acteur(s)", 15},
@@ -464,12 +444,7 @@ func (n *Node) WriteMesuresHeader(xs *xlsx.Sheet) {
 		{"Début", 15},
 		{"Fin", 15},
 	}
-
-	r := xs.AddRow()
-	for i, ci := range cols {
-		r.AddCell().SetString(ci.title)
-		xs.Col(i).Width = ci.width
-	}
+	addHeaderRow(xs, cols)
 }
 
 func (n *Node) WriteMesuresXLS(xs *xlsx.Sheet, nodes Nodes) {
@@ -479,7 +454,7 @@ func (n *Node) WriteMesuresXLS(xs *xlsx.Sheet, nodes Nodes) {
 		for i, ptName := range n.SplicePT {
 			pt := nodes[ptName]
 			r := xs.AddRow()
-			n.writeSitePrefix(r, 2)
+			writeSitePrefix(r, 2)
 			r.AddCell().SetInt(i + 1)
 			r.AddCell().SetInt(pt.DistFromPM)
 			r.AddCell().SetString(ptName)
@@ -489,9 +464,7 @@ func (n *Node) WriteMesuresXLS(xs *xlsx.Sheet, nodes Nodes) {
 			st.Font = *xlsx.NewFont(10, "Calibri")
 			st.Font.Color = "FF6F6F6F"
 			st.ApplyFont = true
-			for i := 2; i < nbColMeasure; i++ {
-				r.Cells[i].SetStyle(st)
-			}
+			addStyleOnRow(r, st, nbColMeasure)
 		}
 	}
 
@@ -512,7 +485,5 @@ func (n *Node) writeMesuresInfo(xs *xlsx.Sheet, nbWaiting int) {
 	st := xlsx.NewStyle()
 	st.Fill = *xlsx.NewFill("solid", colPM, "00000000")
 	st.ApplyFill = true
-	for i := 0; i < nbColMeasure; i++ {
-		r.Cells[i].SetStyle(st)
-	}
+	addStyleOnRow(r, st, nbColMeasure)
 }

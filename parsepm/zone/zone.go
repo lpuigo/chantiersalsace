@@ -70,10 +70,16 @@ func (z *Zone) WriteXLS(dir, name string) error {
 	xlsx.SetDefaultFont(11, "Calibri")
 	xls := xlsx.NewFile()
 
-	err := z.addRaccoSheet(xls)
+	err := z.addTirageSheet(xls)
+	if err != nil {
+		return fmt.Errorf("Tirage : %s", err.Error())
+	}
+
+	err = z.addRaccoSheet(xls)
 	if err != nil {
 		return fmt.Errorf("Racco : %s", err.Error())
 	}
+
 	err = z.addMesuresSheet(xls)
 	if err != nil {
 		return fmt.Errorf("Mesures : %s", err.Error())
@@ -86,6 +92,20 @@ func (z *Zone) WriteXLS(dir, name string) error {
 	defer of.Close()
 
 	return xls.Write(of)
+}
+
+func (z *Zone) addTirageSheet(xls *xlsx.File) error {
+	sheet, err := xls.AddSheet("Tirage")
+	if err != nil {
+		return err
+	}
+
+	z.Cables[0].WriteTirageHeader(sheet)
+
+	for _, cable := range z.Cables {
+		cable.WriteTirageXLS(sheet)
+	}
+	return nil
 }
 
 func (z *Zone) addRaccoSheet(xls *xlsx.File) error {
