@@ -5,8 +5,14 @@ import (
 )
 
 type Troncon struct {
-	Name       string
-	Capa       int
+	Name              string
+	Capa              int
+	CableType         string
+	LoveLength        int
+	UndergroundLength int
+	AerialLength      int
+	FacadeLength      int
+
 	NodeSource *Node
 	NodeDest   *Node
 }

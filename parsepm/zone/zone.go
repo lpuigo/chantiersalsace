@@ -224,3 +224,65 @@ func (z *Zone) AddNewCable(tr *node.Troncon) {
 		tr = nextNode.GetTronconPassage()
 	}
 }
+
+const (
+	rowQCStart      int = 5
+	colQCTroncon    int = 1
+	colQCCableType  int = 2
+	colQCLoveLength int = 4
+	colQCCapa       int = 5
+	colQCLength     int = 10
+	colQCTirageType int = 12
+)
+
+func (z *Zone) ParseQuantiteCableXLS(file string) error {
+	baseFile := filepath.Base(file)
+	xls, err := xlsx.OpenFile(file)
+	if err != nil {
+		return err
+	}
+	sheet := xls.Sheets[0]
+	if sheet.Cell(rowQCStart-2, colQCTroncon).Value != "etiquette" {
+		return fmt.Errorf("could not find 'etiquette' label on line %d, col %d", rowQCStart-1, colQCTroncon+1)
+	}
+	for row := rowQCStart; row < sheet.MaxRow; row++ {
+		trName := sheet.Cell(row, colQCTroncon).Value
+		if trName == "" {
+			continue
+		}
+		tr := z.Troncons[trName]
+		if tr == nil {
+			return fmt.Errorf("unknown Troncon '%s' found on line %d", trName, row+1)
+		}
+		tr.CableType = sheet.Cell(row, colQCCableType).Value
+		tr.LoveLength, err = sheet.Cell(row, colQCLoveLength).Int()
+		if err != nil {
+			fmt.Printf("\t%s: could not read Love length '%s' on line %d, col %d (use default 20m instead)\n", baseFile, sheet.Cell(row, colQCLoveLength).Value, row+1, colQCLoveLength+1)
+			tr.LoveLength = 20
+		}
+		// Capa to be check with already existing value
+		//tr.Capa, err = sheet.Cell(row, colQCCapa).Int()
+		tirageType := strings.ToUpper(sheet.Cell(row, colQCTirageType).Value)
+		tirageLength, err := sheet.Cell(row, colQCLength).Int()
+		switch {
+		case err == nil && strings.Contains(tirageType, "AERIEN"):
+			tr.AerialLength += tirageLength
+		case err == nil && strings.Contains(tirageType, "FACADE"):
+			tr.FacadeLength += tirageLength
+		case err == nil && strings.Contains(tirageType, "INFRA"):
+			tr.UndergroundLength += tirageLength
+		default:
+			if tirageType == "" {
+				continue
+			}
+			if err == nil && tirageType != "" {
+				fmt.Printf("\t%s: Unknown tirage type '%s' on line %d, col %d\n", baseFile, tirageType, row+1, colQCTirageType+1)
+				continue
+			}
+			if err != nil {
+				return fmt.Errorf("could not read tirage length '%s' on line %d, col %d", sheet.Cell(row, colQCLength).Value, row+1, colQCLoveLength+1)
+			}
+		}
+	}
+	return nil
+}
