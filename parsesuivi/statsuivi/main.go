@@ -139,10 +139,11 @@ func (gc GuiContext) BrowseXLS() {
 
 func (gc *GuiContext) SetSuiviFile(file string) error {
 	var err error
-	if !strings.Contains(strings.ToLower(filepath.Base(file)), separator) {
-		err = fmt.Errorf("'%s' n'est pas un fichier XLSX de suivi (le nom du fichier doit contenir %s)", file, separator)
+	baseFile := filepath.Base(file)
+	if !strings.Contains(strings.ToLower(baseFile), separator) {
+		err = fmt.Errorf("'%s' n'est pas un fichier XLSX de suivi (le nom du fichier doit contenir %s)", baseFile, separator)
 	}
-	if !strings.HasSuffix(file, ".xlsx") {
+	if !strings.HasSuffix(baseFile, ".xlsx") {
 		err = fmt.Errorf("'%s' n'est pas un fichier XLSX", file)
 	}
 
@@ -158,11 +159,11 @@ func (gc *GuiContext) SetSuiviFile(file string) error {
 
 func (gc *GuiContext) SetAndProcess(file string) {
 	err := gc.SetSuiviFile(file)
-	if err == nil {
-		gc.Process()
+	if err != nil {
+		gc.AddMsgLn(fmt.Sprintf("Erreur : %s", err.Error()))
 		return
 	}
-	gc.AddMsgLn(fmt.Sprintf("Erreur : %s", err.Error()))
+	gc.Process()
 }
 
 func (gc *GuiContext) Process() {

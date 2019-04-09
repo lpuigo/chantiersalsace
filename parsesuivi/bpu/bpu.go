@@ -8,21 +8,20 @@ import (
 )
 
 type Bpu struct {
-	BpePrices []*Price
-	SroPrices []*Price
-	Boxes     map[string]int
+	Prices map[string][]*Price
+	Boxes  map[string]int
 }
 
 const (
-	colPricesType int = iota
+	colPricesCategory int = iota
 	colPricesName
 	colPricesSize
-	colPricesBox
-	colPricesSplice
+	colPricesPrice
 	colPricesEnd
 )
 const (
-	colBoxesName int = iota
+	colBoxesCategory int = iota
+	colBoxesName
 	colBoxesSize
 	colBoxesType
 	colBoxesEnd
@@ -48,7 +47,10 @@ func NewBpuFromXLS(file string) (bpu *Bpu, err error) {
 		err = fmt.Errorf("could not find '%s' sheet in '%s'", bpuBoxeSheetName, file)
 		return
 	}
-	bpu = &Bpu{}
+	bpu = &Bpu{
+		Prices: map[string][]*Price{},
+		Boxes:  map[string]int{},
+	}
 	err = bpu.parseBpePrices(priceSheet)
 	if err != nil {
 		return
@@ -59,57 +61,51 @@ func NewBpuFromXLS(file string) (bpu *Bpu, err error) {
 
 func (bpu *Bpu) parseBpePrices(sheet *xlsx.Sheet) (err error) {
 	header := make([]string, colPricesEnd)
-	for col := colPricesType; col < colPricesEnd; col++ {
+	for col := colPricesCategory; col < colPricesEnd; col++ {
 		header[col] = sheet.Cell(0, col).Value
 	}
 
 	entryFound := true
-	var entry *Price
 	for row := 1; entryFound; row++ {
-		if sheet.Cell(row, colPricesType).Value == "" { // check for data ending (first column is empty => we are done)
+		if sheet.Cell(row, colPricesCategory).Value == "" { // check for data ending (first column is empty => we are done)
 			entryFound = false
 			continue
 		}
-		switch sheet.Cell(row, colPricesType).Value {
-		case "bpe":
-			entry, err = parseBpePriceRow(sheet, row, header)
-			if err != nil {
-				return
-			}
-			bpu.BpePrices = append(bpu.BpePrices, entry)
-		case "sro":
-			entry, err = parseBpePriceRow(sheet, row, header)
-			if err != nil {
-				return
-			}
-			bpu.SroPrices = append(bpu.SroPrices, entry)
+		cat := sheet.Cell(row, colPricesCategory).Value
+		nPrice, err := parsePriceRow(sheet, row, header)
+		if err != nil {
+			return
 		}
+		bpu.Prices[cat] = append(bpu.Prices[cat], nPrice)
 	}
 
-	sort.Slice(bpu.BpePrices, func(i, j int) bool {
-		return bpu.BpePrices[i].Size < bpu.BpePrices[j].Size
-	})
+	// sort price categories by ascending size
+	for cat, prices := range bpu.Prices {
+		sort.Slice(prices, func(i, j int) bool {
+			return prices[i].Size < prices[j].Size
+		})
+		bpu.Prices[cat] = prices
+	}
 	return
 }
 
-func parseBpePriceRow(sh *xlsx.Sheet, row int, header []string) (p *Price, err error) {
+func parsePriceRow(sh *xlsx.Sheet, row int, header []string) (p *Price, err error) {
 	cSize := sh.Cell(row, colPricesSize)
 	size, e := cSize.Int()
 	if e != nil {
-		err = fmt.Errorf("could not get size info '%s' in sheet '%s(%s)'", cSize.Value, bpuPriceSheetName, xls.RcToAxis(row, 0))
+		err = fmt.Errorf("could not get size info '%s' in sheet '%s!%s'", cSize.Value, bpuPriceSheetName, xls.RcToAxis(row, colPricesSize))
 		return
 	}
-	p = NewPrice(int(size))
-	p.Name = sh.Cell(row, colPricesName).Value
-	for col := colPricesBox; col < colPricesEnd; col++ {
-		cell := sh.Cell(row, col)
-		fval, e := cell.Float()
-		if e != nil {
-			err = fmt.Errorf("could not get value '%s' in sheet '%s(%s)'", cell.Value, bpuPriceSheetName, xls.RcToAxis(row, col))
-			return
-		}
-		p.Income[header[col]] = fval
+	cPrice := sh.Cell(row, colPricesPrice)
+	price, e := cPrice.Float()
+	if e != nil {
+		err = fmt.Errorf("could not get price info '%s' in sheet '%s!%s'", cSize.Value, bpuPriceSheetName, xls.RcToAxis(row, colPricesPrice))
+		return
 	}
+	p = NewPrice()
+	p.Name = sh.Cell(row, colPricesName).Value
+	p.Size = size
+	p.Price = price
 	return
 }
 
@@ -138,13 +134,13 @@ func (bpu *Bpu) parseBoxes(sheet *xlsx.Sheet) (err error) {
 	return
 }
 
-func (bpu *Bpu) String() string {
-	res := ""
-	for _, p := range bpu.BpePrices {
-		res += fmt.Sprintf("%3d : %v\n", p.Size, p.Income)
-	}
-	return res
-}
+//func (bpu *Bpu) String() string {
+//	res := ""
+//	for _, p := range bpu.BpePrices {
+//		res += fmt.Sprintf("%3d : %v\n", p.Size, p.Price)
+//	}
+//	return res
+//}
 
 // GetBpePrice returns Price applicable for given Bpe type (bpeType must be declared)
 func (bpu *Bpu) GetBpePrice(bpeType string) *Price {
