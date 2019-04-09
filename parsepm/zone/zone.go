@@ -70,12 +70,14 @@ func (z *Zone) WriteXLS(dir, name string) error {
 	xlsx.SetDefaultFont(11, "Calibri")
 	xls := xlsx.NewFile()
 
-	err := z.addTirageSheet(xls)
-	if err != nil {
-		return fmt.Errorf("Tirage : %s", err.Error())
+	if len(z.Cables) > 0 && z.Cables[0].Troncons[0].CableType != "" {
+		err := z.addTirageSheet(xls)
+		if err != nil {
+			return fmt.Errorf("Tirage : %s", err.Error())
+		}
 	}
 
-	err = z.addRaccoSheet(xls)
+	err := z.addRaccoSheet(xls)
 	if err != nil {
 		return fmt.Errorf("Racco : %s", err.Error())
 	}

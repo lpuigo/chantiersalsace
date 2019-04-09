@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/lpuig/ewin/chantiersalsace/parsepm/node"
 	"github.com/tealeg/xlsx"
-	"gopkg.in/src-d/go-vitess.v1/vt/log"
+	"log"
 	"strconv"
 	"strings"
 )

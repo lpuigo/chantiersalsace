@@ -10,10 +10,11 @@ import (
 
 const (
 	// DES_PM03
-	//testDir     string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\JTestevuide - DESSELING PM3\Infos PM3`
-	//testBPEDir  string = `CCPE_DES_PM3_BPE`
-	//testROPXlsx string = `CCPE_DES_PM3_ROP\CCPE_DES_PM3_ROP.xlsx`
-	//testXLS     string = `DES_PM3`
+	testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\JTestevuide - DESSELING PM3\Infos PM3`
+	testBPEDir      string = `CCPE_DES_PM3_BPE`
+	testROPXlsx     string = `CCPE_DES_PM3_ROP\CCPE_DES_PM3_ROP.xlsx`
+	testCable94Xlsx string = `Quantité_CCAM_DES_PM3\CCAM_DES_PM3_9_4.xlsx`
+	testXLS         string = `DES_PM3`
 
 	// KED_PM03
 	//testDir     string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM03\`
@@ -23,11 +24,11 @@ const (
 	//testXLS     string = `KED_PM03`
 
 	// KED_PM09
-	testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM09\`
-	testBPEDir      string = `CCAM_KED_PM09_BPE`
-	testROPXlsx     string = `CCAM_KED_PM09_ROP\CCAM_KED_PM09_ROP.xlsx`
-	testCable94Xlsx string = `Quantité_CCAM_KED_PM09\CCAM_KED_PM09_9_4.xlsx`
-	testXLS         string = `KED_PM09`
+	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM09\`
+	//testBPEDir      string = `CCAM_KED_PM09_BPE`
+	//testROPXlsx     string = `CCAM_KED_PM09_ROP\CCAM_KED_PM09_ROP.xlsx`
+	//testCable94Xlsx string = `Quantité_CCAM_KED_PM09\CCAM_KED_PM09_9_4.xlsx`
+	//testXLS         string = `KED_PM09`
 )
 
 func main() {
