@@ -38,7 +38,7 @@ const (
 )
 
 func main() {
-	pricecat, err := bpu.NewBpuFromXLS(filepath.Join(testDir, bpuFile))
+	pricecat, err := bpu.NewCatalogFromXLS(filepath.Join(testDir, bpuFile))
 	if err != nil {
 		log.Fatalf("could not create PriceCatalog: %s", err.Error())
 	}
