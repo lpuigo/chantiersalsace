@@ -27,7 +27,7 @@ func main() {
 	err := MainWindow{
 		AssignTo: &gc.MainWindow,
 		Title:    "EWIN Services Mise à jour du Suivi Chantier",
-		MinSize:  Size{640, 480},
+		MinSize:  Size{800, 480},
 		OnDropFiles: func(files []string) {
 			gc.SetAndProcess(files[0])
 		},
@@ -190,13 +190,13 @@ func (gc *GuiContext) ProcessSuivi() {
 	suiviOutFile := filepath.Join(dir, prefix+suiviOutFileSuffix)
 	attachementOutFile := filepath.Join(dir, prefix+attachmentOutFileSuffix)
 
-	pricecat, err := bpu.NewBpuFromXLS(bpuFile)
+	currentBpu, err := bpu.NewCatalogFromXLS(bpuFile)
 	if err != nil {
 		gc.Logf("Erreur : impossible de traiter le fichier '%'\r\n\t%s\r\n", bpuFile, err.Error())
 		return
 	}
 
-	progress, err := suivi.NewSuiviFromXLS(file, pricecat)
+	progress, err := suivi.NewSuiviFromXLS(file, currentBpu)
 	if err != nil {
 		gc.Logf("Erreur lors du traitement du fichier de suivi\r\n%s", err.Error())
 		return
@@ -208,7 +208,7 @@ func (gc *GuiContext) ProcessSuivi() {
 		return
 	}
 
-	err = progress.WriteAttachmentXLS(attachementOutFile, pricecat)
+	err = progress.WriteAttachmentXLS(attachementOutFile, currentBpu)
 	if err != nil {
 		gc.Logf("Erreur : impossible de mettre à jour le fichier d'attachement '%s'\r\n\t%s\r\n", attachementOutFile, err.Error())
 	}
