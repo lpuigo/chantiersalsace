@@ -188,7 +188,7 @@ func (gc *GuiContext) ProcessSuivi() {
 
 	bpuFile := filepath.Join(dir, bpuFile)
 	suiviOutFile := filepath.Join(dir, prefix+suiviOutFileSuffix)
-	attachementOutFile := filepath.Join(dir, prefix+attachmentOutFileSuffix)
+	//attachementOutFile := filepath.Join(dir, prefix+attachmentOutFileSuffix)
 
 	currentBpu, err := bpu.NewCatalogFromXLS(bpuFile)
 	if err != nil {
@@ -208,8 +208,8 @@ func (gc *GuiContext) ProcessSuivi() {
 		return
 	}
 
-	err = progress.WriteAttachmentXLS(attachementOutFile, currentBpu)
-	if err != nil {
-		gc.Logf("Erreur : impossible de mettre à jour le fichier d'attachement '%s'\r\n\t%s\r\n", attachementOutFile, err.Error())
-	}
+	//err = progress.WriteAttachmentXLS(attachementOutFile)
+	//if err != nil {
+	//	gc.Logf("Erreur : impossible de mettre à jour le fichier d'attachement '%s'\r\n\t%s\r\n", attachementOutFile, err.Error())
+	//}
 }

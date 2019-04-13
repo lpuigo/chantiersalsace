@@ -9,18 +9,18 @@ import (
 
 const (
 	// Moselle PM3
-	//testDir           string = `C:\Users\Laurent\Desktop\Suivi PM3`
-	//bpuFile           string = `BPU Axians Moselle.xlsx`
-	//suiviFile         string = `PM3_suivi 02_15.xlsx`
-	//suiviOutFile      string = `PM3_Suivi.xlsx`
-	//attachmentOutFile string = `PM3_Attachement.xlsx`
+	testDir           string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\JTestevuide - DESSELING PM3\Suivi PM3\`
+	bpuFile           string = `BPU.xlsx`
+	suiviFile         string = `DES_PM3_suivi 04-09.xlsx`
+	suiviOutFile      string = `PM3_Suivi.xlsx`
+	attachmentOutFile string = `PM3_Attachement.xlsx`
 
 	// Alsace DXC
-	testDir           string = `C:\Users\Laurent\Desktop\Suivi`
-	bpuFile           string = `BPU Axians Alsace.xlsx`
-	suiviFile         string = `DXC_Suivi Equipe v2 - MAJ27 FEB S09.xlsx`
-	suiviOutFile      string = `DXC_Suivi.xlsx`
-	attachmentOutFile string = `DXC_Attachement.xlsx`
+	//testDir           string = `C:\Users\Laurent\Desktop\Suivi`
+	//bpuFile           string = `BPU Axians Alsace.xlsx`
+	//suiviFile         string = `DXC_Suivi Equipe v2 - MAJ27 FEB S09.xlsx`
+	//suiviOutFile      string = `DXC_Suivi.xlsx`
+	//attachmentOutFile string = `DXC_Attachement.xlsx`
 
 	// Alsace ECF
 	//testDir           string = `C:\Users\Laurent\Desktop\Suivi`
@@ -56,8 +56,8 @@ func main() {
 		log.Fatalf("%s: could not Write Suivi XLS: %s", suiviOutFile, err.Error())
 	}
 
-	err = progress.WriteAttachmentXLS(filepath.Join(testDir, attachmentOutFile), pricecat)
-	if err != nil {
-		log.Fatalf("%s: could not Write Suivi XLS: %s", attachmentOutFile, err.Error())
-	}
+	//err = progress.WriteAttachmentXLS(filepath.Join(testDir, attachmentOutFile))
+	//if err != nil {
+	//	log.Fatalf("%s: could not Write Suivi XLS: %s", attachmentOutFile, err.Error())
+	//}
 }

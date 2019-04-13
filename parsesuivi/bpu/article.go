@@ -1,12 +1,12 @@
 package bpu
 
-type Chapter struct {
+type Article struct {
 	Name  string
 	Size  int
 	Price float64
 }
 
-func NewChapter() *Chapter {
-	p := &Chapter{}
+func NewChapter() *Article {
+	p := &Article{}
 	return p
 }

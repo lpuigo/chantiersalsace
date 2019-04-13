@@ -1,14 +1,14 @@
 package suivi
 
-type Error struct {
+type ParsingError struct {
 	Msgs []string
 }
 
-func (e Error) Error() string {
+func (e ParsingError) Error() string {
 	return e.ToString("\t", "\r\n")
 }
 
-func (e Error) ToString(prefix, sep string) string {
+func (e ParsingError) ToString(prefix, sep string) string {
 	res := ""
 	for _, msg := range e.Msgs {
 		res += prefix + msg + sep
@@ -16,10 +16,14 @@ func (e Error) ToString(prefix, sep string) string {
 	return res
 }
 
-func (e *Error) Add(err error) {
+func (e *ParsingError) Append(perr ParsingError) {
+	e.Msgs = append(e.Msgs, perr.Msgs...)
+}
+
+func (e *ParsingError) Add(err error) {
 	e.Msgs = append(e.Msgs, err.Error())
 }
 
-func (e Error) HasError() bool {
+func (e ParsingError) HasError() bool {
 	return len(e.Msgs) > 0
 }

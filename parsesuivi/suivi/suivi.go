@@ -10,9 +10,18 @@ import (
 )
 
 type Suivi struct {
-	Items      []*bpu.Item
+	Items     []*bpu.Item
 	BeginDate time.Time
 	LastDate  time.Time
+	Catalog   *bpu.Catalog
+}
+
+func NewSuivi(catalog *bpu.Catalog) *Suivi {
+	s := &Suivi{}
+	s.BeginDate = GetMonday(time.Now())
+	s.LastDate = s.BeginDate
+	s.Catalog = catalog
+	return s
 }
 
 func (s *Suivi) String() string {
@@ -26,12 +35,8 @@ func (s *Suivi) String() string {
 func (s *Suivi) Add(items ...*bpu.Item) {
 	s.Items = append(s.Items, items...)
 	for _, item := range items {
-		if s.BeginDate.IsZero() {
-			s.BeginDate = GetMonday(time.Now())
-			s.LastDate = s.BeginDate
-		}
 		if !item.Done {
-			return
+			continue
 		}
 		if item.Date.Before(s.BeginDate) {
 			s.BeginDate = item.Date
@@ -53,92 +58,24 @@ func NewSuiviFromXLS(file string, catalog *bpu.Catalog) (s *Suivi, err error) {
 	if err != nil {
 		return
 	}
+
+	s = NewSuivi(catalog)
+
 	// TODO parse Tirage Tab sheetTirage
+
 	// parse Racco Tab sheetRacco
 	bsh := xf.Sheet[sheetRacco]
 	if bsh == nil {
 		err = fmt.Errorf("onglet '%s' introuvable", sheetRacco)
 		return
 	}
-	s, err = parseRaccoTab(bsh, catalog)
+	perr := ParseTab(bsh, NewRaccoParser(), s)
+	if perr.HasError() {
+		return nil, perr
+	}
 
 	//TODO parse Mesure Tab sheetMeasure
 
-	return
-}
-
-const (
-	colRaccoName    int = 0
-	colRaccoBoxName int = 2
-	colRaccoBoxType int = 3
-	colRaccoSize    int = 6
-	colRaccoOpe     int = 7
-	colRaccoFiber   int = 8
-	colRaccoSplice  int = 9
-	colRaccoStatus  int = 10
-	colRaccoDate    int = 14
-)
-
-func parseRaccoTab(bsh *xlsx.Sheet, catalog *bpu.Catalog) (s *Suivi, err Error) {
-	s = &Suivi{}
-	parseErr := Error{}
-
-	row := 0
-	inProgress := true
-	var nbFiber, nbSplice, bpeRow int
-	var bpe *Bpe
-	for inProgress {
-		row++
-		bpeName := bsh.Cell(row, colRaccoName).Value
-		bpeOpe := bsh.Cell(row, colRaccoOpe).Value
-		if bpeOpe == "" && bpeName == "" {
-			inProgress = false
-			continue
-		}
-		if bpeName != "" { // This Row contains BPE definition, parse and process it
-			// check finished BPE
-			if bpe != nil {
-				if !bpe.CheckFiber(nbFiber) {
-					parseErr.Add(fmt.Errorf("invalid Nb Fiber for Bpe in cell %s!%s", sheetRacco, xls.RcToAxis(bpeRow, colRaccoFiber)))
-				}
-				if !bpe.CheckSplice(nbSplice) {
-					parseErr.Add(fmt.Errorf("invalid Nb Splice for Bpe in cell %s!%s", sheetRacco, xls.RcToAxis(bpeRow, colRaccoSplice)))
-				}
-			}
-			bpeRow = row
-			items, e := NewItemFromRaccoXLSRow(bsh, row, catalog)
-			if e != nil {
-				parseErr.Add(e)
-			} else {
-				s.Add(items...)
-				nbFiber = 0
-				nbSplice = 0
-			}
-			continue
-		}
-		// this row contains BPE detail, check for fiber and splice number
-
-		sf := bsh.Cell(row, colRaccoFiber).Value
-		if sf != "" {
-			nbf, e := bsh.Cell(row, colRaccoFiber).Int()
-			if e != nil {
-				parseErr.Add(fmt.Errorf("could not parse Nb Fiber in cell %s!%s", sheetRacco, xls.RcToAxis(row, colRaccoFiber)))
-			}
-			nbFiber += nbf
-		}
-		ss := bsh.Cell(row, colRaccoSplice).Value != ""
-		if ss {
-			nbs, e := bsh.Cell(row, colRaccoSplice).Int()
-			if e != nil {
-				parseErr.Add(fmt.Errorf("could not parse Nb Splice in cell %s!%s", sheetRacco, xls.RcToAxis(row, colRaccoSplice)))
-			}
-			nbSplice += nbs
-		}
-	}
-
-	if parseErr.HasError() {
-		err = parseErr
-	}
 	return
 }
 
@@ -154,17 +91,17 @@ func (s *Suivi) WriteSuiviXLS(file string) error {
 		return err
 	}
 	s.writeSuiviSheet(xf)
+	s.writeProgressSheet(xf)
 	return xf.Save()
 }
 
-func (s *Suivi) WriteAttachmentXLS(file string, priceCatalog *bpu.Catalog) error {
+func (s *Suivi) WriteAttachmentXLS(file string) error {
 	xf, err := excelize.OpenFile(file)
 	if err != nil {
 		return err
 	}
 
-	s.writeAttachmentSheet(xf, priceCatalog)
-	s.writeProgressSheet(xf)
+	s.writeAttachmentSheet(xf)
 	xf.UpdateLinkedValue()
 	return xf.Save()
 }
@@ -174,99 +111,118 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 		xf.NewSheet(suiviSheetName)
 	}
 
-	fTodo := func(bpe *Bpe) bool { return bpe.ToDo }
-	fNbBpe := func(bpe *Bpe) int { return 1 }
-	fNbFiber := func(bpe *Bpe) int { return bpe.NbFiber }
-	fNbSplice := func(bpe *Bpe) int { return bpe.NbSplice }
-	fValue := func(bpe *Bpe) float64 { return bpe.BpeValue + bpe.SpliceValue }
+	fAll := func(item *bpu.Item) bool { return true }
+	fTodo := func(item *bpu.Item) bool { return item.Todo }
+	fNbQty := func(item *bpu.Item) int { return item.Quantity }
+	fPrice := func(item *bpu.Item) float64 { return item.Price() }
 
-	nbBPE := s.CountInt(fNbBpe, fTodo)
-	nbFiber := s.CountInt(fNbFiber, fTodo)
-	nbSplice := s.CountInt(fNbSplice, fTodo)
-	nbValue := s.CountFloat(fValue, fTodo)
+	articleNames := s.Catalog.GetArticleNames("Tirage")
+	articleNames = append(articleNames, s.Catalog.GetArticleNames("Racco")...)
+	articleNames = append(articleNames, s.Catalog.GetArticleNames("Mesure")...)
+
+	nbTot := make(map[string]int)
+	valTot := make(map[string]float64)
+	valTot["Global"] = s.CountFloat(s.Items, fPrice, fTodo)
+	articleNameItems := s.GetItems(fTodo)
+	for _, articleName := range articleNames {
+		nbTot[articleName] = s.CountInt(articleNameItems[articleName], fNbQty, fAll)
+		valTot[articleName] = s.CountFloat(articleNameItems[articleName], fPrice, fAll)
+	}
 
 	// Set Dates header
-	xf.SetCellValue(suiviSheetName, xls.RcToAxis(0, 0), "Semaines")
-	xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, 0), "Nb BPE Total")
-	xf.SetCellValue(suiviSheetName, xls.RcToAxis(2, 0), "Nb BPE Installés")
-	xf.SetCellValue(suiviSheetName, xls.RcToAxis(3, 0), "Nb Fibre Total")
-	xf.SetCellValue(suiviSheetName, xls.RcToAxis(4, 0), "Nb Fibre Installées")
-	xf.SetCellValue(suiviSheetName, xls.RcToAxis(5, 0), "Nb Epissure Total")
-	xf.SetCellValue(suiviSheetName, xls.RcToAxis(6, 0), "Nb Epissure Effectuées")
-	xf.SetCellValue(suiviSheetName, xls.RcToAxis(7, 0), "Valeur € Total")
-	xf.SetCellValue(suiviSheetName, xls.RcToAxis(8, 0), "Valeur € Réalisée")
-	dates := s.Dates()
-	for i, d := range dates {
-		fDone := func(bpe *Bpe) bool { return bpe.ToDo && bpe.Done && !bpe.Date.After(d) }
-		xf.SetCellValue(suiviSheetName, xls.RcToAxis(0, i+1), d)
-		xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, i+1), nbBPE)
-		xf.SetCellValue(suiviSheetName, xls.RcToAxis(2, i+1), s.CountInt(fNbBpe, fDone))
-		xf.SetCellValue(suiviSheetName, xls.RcToAxis(3, i+1), nbFiber)
-		xf.SetCellValue(suiviSheetName, xls.RcToAxis(4, i+1), s.CountInt(fNbFiber, fDone))
-		xf.SetCellValue(suiviSheetName, xls.RcToAxis(5, i+1), nbSplice)
-		xf.SetCellValue(suiviSheetName, xls.RcToAxis(6, i+1), s.CountInt(fNbSplice, fDone))
-		xf.SetCellValue(suiviSheetName, xls.RcToAxis(7, i+1), nbValue)
-		xf.SetCellValue(suiviSheetName, xls.RcToAxis(8, i+1), s.CountFloat(fValue, fDone))
+	xf.SetCellValue(suiviSheetName, xls.RcToAxis(0, 1), "Semaines")
+	xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, 0), "Suivi financier")
+	xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, 1), "€ Total")
+	xf.SetCellValue(suiviSheetName, xls.RcToAxis(2, 1), "€")
+	row := 2
+	for _, articleName := range articleNames {
+		if nbTot[articleName] == 0 {
+			continue
+		}
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+1, 0), articleName)
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+1, 1), "Nb Total")
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+2, 1), "Nb")
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+3, 1), "€ Total")
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+4, 1), "€")
+		row += 4
+	}
+
+	for col, d := range s.Dates() {
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(0, col+2), d)
+		fDone := func(item *bpu.Item) bool { return item.Done && !item.Date.After(d) }
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, col+2), valTot["Global"])
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(2, col+2), s.CountFloat(s.Items, fPrice, fDone))
+		row := 2
+		for _, articleName := range articleNames {
+			if nbTot[articleName] == 0 {
+				continue
+			}
+			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+1, col+2), nbTot[articleName])
+			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+2, col+2), s.CountInt(articleNameItems[articleName], fNbQty, fDone))
+			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+3, col+2), valTot[articleName])
+			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+4, col+2), s.CountFloat(articleNameItems[articleName], fPrice, fDone))
+			row += 4
+		}
 	}
 }
 
-func (s *Suivi) writeAttachmentSheet(xf *excelize.File, priceCatalog *bpu.Catalog) {
-	if xf.GetSheetIndex(attachmentSheetName) == 0 {
-		xf.NewSheet(attachmentSheetName)
-	}
-
-	row := 0
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), "Ref.")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), "Prix Unit. Boitier")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), "Quantité Boitier")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), "Boitiers Réalisés")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), "Prix Unit. Epissure")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), "Quantité Epissure")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), "Epissures Réalisées")
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), "Montant HT")
-
-	row++
-	// SRO
-	ps, pm := priceCatalog.GetRaccoPmPrices()
-	fTDSro := func(bpe *Bpe) bool { return bpe.ToDo && bpe.IsSro() }
-	fSro := func(bpe *Bpe) bool { return bpe.ToDo && bpe.Done && bpe.IsSro() }
-	fNbSro := func(bpe *Bpe) int {
-		nbSro, _ := bpe.GetSroNumbers(priceCatalog)
-		return nbSro
-	}
-	fNbSroMissingModule := func(bpe *Bpe) int {
-		_, nbMissingModule := bpe.GetSroNumbers(priceCatalog)
-		return nbMissingModule
-	}
-	fSroValue := func(bpe *Bpe) float64 { return bpe.BpeValue }
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), ps.Name)
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), ps.Price)
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), s.CountInt(fNbSro, fTDSro))
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), s.CountInt(fNbSro, fSro))
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), pm.Price)
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), s.CountInt(fNbSroMissingModule, fTDSro))
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), s.CountInt(fNbSroMissingModule, fSro))
-	xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), s.CountFloat(fSroValue, fSro))
-
-	// Bpe
-	fNbBpe := func(bpe *Bpe) int { return 1 }
-	fNbSplice := func(bpe *Bpe) int { return bpe.NbSplice }
-	fValue := func(bpe *Bpe) float64 { return bpe.BpeValue + bpe.SpliceValue }
-	for _, priceCat := range priceCatalog.Chapters {
-		for _, p := range priceCat {
-			row++
-			fTDBpe := func(bpe *Bpe) bool { return bpe.ToDo && bpe.PriceName == p.Name }
-			fBpe := func(bpe *Bpe) bool { return bpe.ToDo && bpe.Done && bpe.PriceName == p.Name }
-			xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), p.Name)
-			xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), p.Price)
-			xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), s.CountInt(fNbBpe, fTDBpe))
-			xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), s.CountInt(fNbBpe, fBpe))
-			xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), p.GetSpliceValue(1))
-			xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), s.CountInt(fNbSplice, fTDBpe))
-			xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), s.CountInt(fNbSplice, fBpe))
-			xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), s.CountFloat(fValue, fBpe))
-		}
-	}
+func (s *Suivi) writeAttachmentSheet(xf *excelize.File) {
+	//if xf.GetSheetIndex(attachmentSheetName) == 0 {
+	//	xf.NewSheet(attachmentSheetName)
+	//}
+	//
+	//row := 0
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), "Ref.")
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), "Prix Unit. Boitier")
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), "Quantité Boitier")
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), "Boitiers Réalisés")
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), "Prix Unit. Epissure")
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), "Quantité Epissure")
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), "Epissures Réalisées")
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), "Montant HT")
+	//
+	//row++
+	//// SRO
+	//ps, pm := priceCatalog.GetRaccoPmPrices()
+	//fTDSro := func(bpe *Bpe) bool { return bpe.ToDo && bpe.IsSro() }
+	//fSro := func(bpe *Bpe) bool { return bpe.ToDo && bpe.Done && bpe.IsSro() }
+	//fNbSro := func(bpe *Bpe) int {
+	//	nbSro, _ := bpe.GetSroNumbers(priceCatalog)
+	//	return nbSro
+	//}
+	//fNbSroMissingModule := func(bpe *Bpe) int {
+	//	_, nbMissingModule := bpe.GetSroNumbers(priceCatalog)
+	//	return nbMissingModule
+	//}
+	//fSroValue := func(bpe *Bpe) float64 { return bpe.BpeValue }
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), ps.Name)
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), ps.Price)
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), s.CountInt(fNbSro, fTDSro))
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), s.CountInt(fNbSro, fSro))
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), pm.Price)
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), s.CountInt(fNbSroMissingModule, fTDSro))
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), s.CountInt(fNbSroMissingModule, fSro))
+	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), s.CountFloat(fSroValue, fSro))
+	//
+	//// Bpe
+	//fNbBpe := func(bpe *Bpe) int { return 1 }
+	//fNbSplice := func(bpe *Bpe) int { return bpe.NbSplice }
+	//fValue := func(bpe *Bpe) float64 { return bpe.BpeValue + bpe.SpliceValue }
+	//for _, priceCat := range priceCatalog.Chapters {
+	//	for _, p := range priceCat {
+	//		row++
+	//		fTDBpe := func(bpe *Bpe) bool { return bpe.ToDo && bpe.PriceName == p.Name }
+	//		fBpe := func(bpe *Bpe) bool { return bpe.ToDo && bpe.Done && bpe.PriceName == p.Name }
+	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), p.Name)
+	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), p.Price)
+	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), s.CountInt(fNbBpe, fTDBpe))
+	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), s.CountInt(fNbBpe, fBpe))
+	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), p.GetSpliceValue(1))
+	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), s.CountInt(fNbSplice, fTDBpe))
+	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), s.CountInt(fNbSplice, fBpe))
+	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), s.CountFloat(fValue, fBpe))
+	//	}
+	//}
 
 }
 
@@ -276,26 +232,26 @@ func (s *Suivi) writeProgressSheet(xf *excelize.File) {
 	}
 
 	row := 0
-	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 0), "Bpe")
-	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 1), "Type Boitier")
-	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 2), "Taille Tronçon")
-	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 3), "Nb Epissure")
-	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 4), "Ref Catalogue")
+	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 0), "Item")
+	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 1), "Info")
+	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 2), "Code BPU")
+	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 3), "Quantité")
+	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 4), "Prix")
 	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 5), "Installé")
 	xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 6), "Semaine")
-	for _, b := range s.Bpes {
-		if !b.ToDo {
+	for _, item := range s.Items {
+		if !(item.Todo && item.Quantity > 0) {
 			continue
 		}
 		row++
-		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 0), b.Name)
-		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 1), b.Type)
-		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 2), fmt.Sprintf("%dFO", b.Size))
-		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 3), b.NbSplice)
-		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 4), b.PriceName)
-		if b.Done {
+		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 0), item.Name)
+		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 1), item.Info)
+		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 2), item.Article.Name)
+		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 3), item.Quantity)
+		xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 4), item.Price())
+		if item.Done {
 			xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 5), "Oui")
-			xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 6), b.Date)
+			xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 6), item.Date)
 		} else {
 			xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 5), "")
 			xf.SetCellValue(progressSheetName, xls.RcToAxis(row, 6), "")
@@ -311,21 +267,31 @@ func (s *Suivi) Dates() []time.Time {
 	return res
 }
 
-func (s *Suivi) CountInt(val func(bpe *Bpe) int, filter func(bpe *Bpe) bool) int {
-	res := 0
-	for _, b := range s.Bpes {
-		if filter(b) {
-			res += val(b)
+func (s *Suivi) GetItems(keep func(item *bpu.Item) bool) map[string][]*bpu.Item {
+	res := make(map[string][]*bpu.Item)
+	for _, item := range s.Items {
+		if keep(item) {
+			res[item.Article.Name] = append(res[item.Article.Name], item)
 		}
 	}
 	return res
 }
 
-func (s *Suivi) CountFloat(val func(bpe *Bpe) float64, filter func(bpe *Bpe) bool) float64 {
+func (s *Suivi) CountInt(items []*bpu.Item, val func(item *bpu.Item) int, keep func(item *bpu.Item) bool) int {
+	res := 0
+	for _, item := range items {
+		if keep(item) {
+			res += val(item)
+		}
+	}
+	return res
+}
+
+func (s *Suivi) CountFloat(items []*bpu.Item, val func(item *bpu.Item) float64, keep func(item *bpu.Item) bool) float64 {
 	res := 0.0
-	for _, b := range s.Bpes {
-		if filter(b) {
-			res += val(b)
+	for _, item := range items {
+		if keep(item) {
+			res += val(item)
 		}
 	}
 	return res

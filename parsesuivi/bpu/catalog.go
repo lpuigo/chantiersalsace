@@ -9,8 +9,8 @@ import (
 )
 
 type Catalog struct {
-	Chapters map[string][]*Chapter
-	Boxes    map[string]map[string]*Box
+	Chapters map[string]CategoryChapters // map[Activity]map[Category][]*Article
+	Boxes    map[string]map[string]*Box  // map[Category]map[Name]*Box
 }
 
 const (
@@ -34,7 +34,7 @@ func NewCatalogFromXLS(file string) (bpu *Catalog, err error) {
 		return
 	}
 	bpu = &Catalog{
-		Chapters: map[string][]*Chapter{},
+		Chapters: map[string]CategoryChapters{},
 		Boxes:    map[string]map[string]*Box{},
 	}
 	err = bpu.parseChapters(priceSheet)
@@ -45,8 +45,13 @@ func NewCatalogFromXLS(file string) (bpu *Catalog, err error) {
 	return
 }
 
+func (catalog *Catalog) GetCategoryChapters(activity string) CategoryChapters {
+	return catalog.Chapters[strings.ToUpper(activity)]
+}
+
 const (
-	colPricesCategory int = iota
+	colPricesActivity int = iota
+	colPricesCategory
 	colPricesName
 	colPricesSize
 	colPricesPrice
@@ -56,30 +61,34 @@ const (
 func (catalog *Catalog) parseChapters(sheet *xlsx.Sheet) (err error) {
 	entryFound := true
 	for row := 1; entryFound; row++ {
-		if sheet.Cell(row, colPricesCategory).Value == "" { // check for data ending (first column is empty => we are done)
+		activity := sheet.Cell(row, colPricesActivity).Value
+		if activity == "" { // check for data ending (first column is empty => we are done)
 			entryFound = false
 			continue
 		}
 		cat := sheet.Cell(row, colPricesCategory).Value
-		nPrice, err := parseChapterRow(sheet, row)
+		nChapter, err := parseChapterRow(sheet, row)
 		if err != nil {
 			return err
 		}
 		cat = strings.ToUpper(cat)
-		catalog.Chapters[cat] = append(catalog.Chapters[cat], nPrice)
+		activity = strings.ToUpper(activity)
+		currentActivityCatChapters, found := catalog.Chapters[activity]
+		if !found {
+			currentActivityCatChapters = NewCategoryChapters()
+			catalog.Chapters[activity] = currentActivityCatChapters
+		}
+		currentActivityCatChapters[cat] = append(currentActivityCatChapters[cat], nChapter)
 	}
 
 	// sort price categories by ascending size
-	for cat, prices := range catalog.Chapters {
-		sort.Slice(prices, func(i, j int) bool {
-			return prices[i].Size < prices[j].Size
-		})
-		catalog.Chapters[cat] = prices
-	}
+	//for _, actCatChapt := range catalog.Chapters {
+	//	actCatChapt.SortChapters()
+	//}
 	return
 }
 
-func parseChapterRow(sh *xlsx.Sheet, row int) (p *Chapter, err error) {
+func parseChapterRow(sh *xlsx.Sheet, row int) (p *Article, err error) {
 	cSize := sh.Cell(row, colPricesSize)
 	size, e := cSize.Int()
 	if e != nil {
@@ -139,77 +148,35 @@ func (catalog *Catalog) parseBoxes(sheet *xlsx.Sheet) (err error) {
 //func (bpu *Catalog) String() string {
 //	res := ""
 //	for _, p := range bpu.BpePrices {
-//		res += fmt.Sprintf("%3d : %v\n", p.Size, p.Chapter)
+//		res += fmt.Sprintf("%3d : %v\n", p.Size, p.Article)
 //	}
 //	return res
 //}
 
-// GetRaccoBoxPrice returns Chapter applicable for given Bpe type (bpeType must be declared)
-func (catalog *Catalog) GetRaccoBoxPrice(cat, name string) (box, splice *Chapter, err error) {
-	// box lookup
-	cat = strings.ToUpper(cat)
-	name = strings.ToUpper(name)
-	catBox, found := catalog.Boxes[cat]
-	if !found {
-		err = fmt.Errorf("unknow box category '%s'", cat)
-		return
-	}
-	b, found := catBox[name]
-	if !found {
-		err = fmt.Errorf("unknow box name '%s' for category '%s'", name, cat)
-		return
-	}
-
-	// box price lookup
-	catPrice, found := catalog.Chapters[cat]
-	if !found {
-		err = fmt.Errorf("unknow price category '%s'", cat)
-		return
-	}
-
-	for _, p := range catPrice {
-		if b.Size <= p.Size {
-			box = p
-			break
-		}
-	}
-	if box == nil {
-		err = fmt.Errorf("no minimal price size found for '%d'", b.Size)
-		return
-	}
-
-	// splice price lookup
-	spliceCat := cat + " SPLICE"
-	catPrice, found = catalog.Chapters[spliceCat]
-	if !found {
-		// no Splice for this category, leave splice price as nil
-		return
-	}
-
-	for _, p := range catPrice {
-		if b.Size <= p.Size {
-			splice = p
-			break
-		}
-	}
-	if splice == nil {
-		err = fmt.Errorf("no minimal splice price size found for '%d'", b.Size)
-		return
-	}
-
-	return
-}
-
-// GetRaccoPmPrices returns applicable PM Chapter & missing ModulePrice
-func (catalog *Catalog) GetRaccoPmPrices() (*Chapter, *Chapter) {
-	return catalog.Chapters["PM"][0], catalog.Chapters["PM"][1]
-}
-
-func (catalog *Catalog) IsBoxDefined(cat, name string) bool {
+func (catalog *Catalog) IsBoxDefined(cat, boxName string) bool {
 	catBox, found := catalog.Boxes[strings.ToUpper(cat)]
 	if !found {
 		return false
 	}
-	_, found = catBox[strings.ToUpper(name)]
+	_, found = catBox[strings.ToUpper(boxName)]
 	return found
+}
+
+func (catalog *Catalog) GetBox(cat, boxName string) *Box {
+	catBox, found := catalog.Boxes[strings.ToUpper(cat)]
+	if !found {
+		return nil
+	}
+	return catBox[strings.ToUpper(boxName)]
+}
+
+func (catalog *Catalog) GetArticleNames(activity string) []string {
+	res := []string{}
+	for _, catChapters := range catalog.GetCategoryChapters(activity) {
+		for _, chapter := range catChapters {
+			res = append(res, chapter.Name)
+		}
+	}
+	sort.Strings(res)
+	return res
 }
