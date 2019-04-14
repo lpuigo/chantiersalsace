@@ -60,10 +60,9 @@ func (rp *RaccoParser) ParseBlock(sh *xlsx.Sheet, catalog *bpu.Catalog, row int)
 	}
 
 	// parse box declaration line
-	items, nBox, e = rp.newItemFromRaccoXLSRow(sh, row, catalog)
+	items, nBox, e = rp.newItemFromXLSRow(sh, row, catalog)
 	if nBox == nil {
 		err.Add(e)
-		return
 	}
 
 	// parse remaining block detail lines
@@ -109,7 +108,7 @@ func (rp *RaccoParser) getNbFiberAndSplice(sh *xlsx.Sheet, row int) (nbFiber, nb
 	return
 }
 
-func (rp *RaccoParser) newItemFromRaccoXLSRow(sh *xlsx.Sheet, row int, catalog *bpu.Catalog) (items []*bpu.Item, nBox *box, err error) {
+func (rp *RaccoParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog *bpu.Catalog) (items []*bpu.Item, nBox *box, err error) {
 	var mainChapter, optChapter *bpu.Article
 	var qty1, qty2 int
 	var e error
@@ -150,7 +149,7 @@ func (rp *RaccoParser) newItemFromRaccoXLSRow(sh *xlsx.Sheet, row int, catalog *
 		return
 	}
 	boxSize := int(isize)
-	info := fmt.Sprintf("%s: %s (%dFO)", boxCatergory, boxType, boxSize)
+	info := fmt.Sprintf("Install. %s: %s (%dFO)", boxCatergory, boxType, boxSize)
 
 	nbFiber, e := sh.Cell(row, colRaccoFiber).Int()
 	if e != nil {
@@ -187,7 +186,7 @@ func (rp *RaccoParser) newItemFromRaccoXLSRow(sh *xlsx.Sheet, row int, catalog *
 		todo = true
 	case "na", "annule", "supprime", "suprime":
 		todo = false
-	case "":
+	case "", "nok", "ko":
 		todo = true
 	default:
 		err = fmt.Errorf(
@@ -204,10 +203,10 @@ func (rp *RaccoParser) newItemFromRaccoXLSRow(sh *xlsx.Sheet, row int, catalog *
 		date, e := sh.Cell(row, colRaccoDate).GetTime(false)
 		if e != nil {
 			err = fmt.Errorf(
-				"could not parse Box Size from '%s' in cell %s!%s",
-				strings.TrimSuffix(size, "FO"),
-				sheetRacco,
-				xls.RcToAxis(row, colRaccoSize),
+				"could not parse date from '%s' in cell %s!%s",
+				sh.Cell(row, colRaccoDate).Value,
+				rp.activity,
+				xls.RcToAxis(row, colRaccoDate),
 			)
 			return
 		}

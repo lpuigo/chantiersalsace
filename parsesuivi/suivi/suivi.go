@@ -62,19 +62,37 @@ func NewSuiviFromXLS(file string, catalog *bpu.Catalog) (s *Suivi, err error) {
 	s = NewSuivi(catalog)
 
 	// TODO parse Tirage Tab sheetTirage
-
-	// parse Racco Tab sheetRacco
-	bsh := xf.Sheet[sheetRacco]
-	if bsh == nil {
-		err = fmt.Errorf("onglet '%s' introuvable", sheetRacco)
+	rsh := xf.Sheet[sheetTirage]
+	if rsh == nil {
+		err = fmt.Errorf("onglet '%s' introuvable", sheetTirage)
 		return
 	}
-	perr := ParseTab(bsh, NewRaccoParser(), s)
+	perr := ParseTab(rsh, NewPullingParser(), s)
 	if perr.HasError() {
 		return nil, perr
 	}
 
-	//TODO parse Mesure Tab sheetMeasure
+	// parse Racco Tab sheetRacco
+	rsh = xf.Sheet[sheetRacco]
+	if rsh == nil {
+		err = fmt.Errorf("onglet '%s' introuvable", sheetRacco)
+		return
+	}
+	perr = ParseTab(rsh, NewRaccoParser(), s)
+	if perr.HasError() {
+		return nil, perr
+	}
+
+	// parse Mesure Tab sheetMeasure
+	msh := xf.Sheet[sheetMeasure]
+	if msh == nil {
+		err = fmt.Errorf("onglet '%s' introuvable", sheetMeasure)
+		return
+	}
+	perr = ParseTab(msh, NewMeasurementParser(), s)
+	if perr.HasError() {
+		return nil, perr
+	}
 
 	return
 }
@@ -83,6 +101,7 @@ const (
 	suiviSheetName      string = "Suivi"
 	progressSheetName   string = "Avancement"
 	attachmentSheetName string = "Attachement"
+	global              string = "Global"
 )
 
 func (s *Suivi) WriteSuiviXLS(file string) error {
@@ -116,13 +135,13 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 	fNbQty := func(item *bpu.Item) int { return item.Quantity }
 	fPrice := func(item *bpu.Item) float64 { return item.Price() }
 
-	articleNames := s.Catalog.GetArticleNames("Tirage")
-	articleNames = append(articleNames, s.Catalog.GetArticleNames("Racco")...)
-	articleNames = append(articleNames, s.Catalog.GetArticleNames("Mesure")...)
+	articleNames := s.Catalog.GetArticleNames(sheetTirage)
+	articleNames = append(articleNames, s.Catalog.GetArticleNames(sheetRacco)...)
+	articleNames = append(articleNames, s.Catalog.GetArticleNames(sheetMeasure)...)
 
 	nbTot := make(map[string]int)
 	valTot := make(map[string]float64)
-	valTot["Global"] = s.CountFloat(s.Items, fPrice, fTodo)
+	valTot[global] = s.CountFloat(s.Items, fPrice, fTodo)
 	articleNameItems := s.GetItems(fTodo)
 	for _, articleName := range articleNames {
 		nbTot[articleName] = s.CountInt(articleNameItems[articleName], fNbQty, fAll)
@@ -133,7 +152,7 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 	xf.SetCellValue(suiviSheetName, xls.RcToAxis(0, 1), "Semaines")
 	xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, 0), "Suivi financier")
 	xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, 1), "€ Total")
-	xf.SetCellValue(suiviSheetName, xls.RcToAxis(2, 1), "€")
+	xf.SetCellValue(suiviSheetName, xls.RcToAxis(2, 1), "€ Fait")
 	row := 2
 	for _, articleName := range articleNames {
 		if nbTot[articleName] == 0 {
@@ -143,14 +162,14 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+1, 1), "Nb Total")
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+2, 1), "Nb")
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+3, 1), "€ Total")
-		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+4, 1), "€")
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+4, 1), "€ Fait")
 		row += 4
 	}
 
 	for col, d := range s.Dates() {
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(0, col+2), d)
 		fDone := func(item *bpu.Item) bool { return item.Done && !item.Date.After(d) }
-		xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, col+2), valTot["Global"])
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, col+2), valTot[global])
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(2, col+2), s.CountFloat(s.Items, fPrice, fDone))
 		row := 2
 		for _, articleName := range articleNames {
