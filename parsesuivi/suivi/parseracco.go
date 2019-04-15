@@ -61,7 +61,7 @@ func (rp *RaccoParser) ParseBlock(sh *xlsx.Sheet, catalog *bpu.Catalog, row int)
 
 	// parse box declaration line
 	items, nBox, e = rp.newItemFromXLSRow(sh, row, catalog)
-	if nBox == nil {
+	if e != nil {
 		err.Add(e)
 	}
 
@@ -85,13 +85,15 @@ func (rp *RaccoParser) ParseBlock(sh *xlsx.Sheet, catalog *bpu.Catalog, row int)
 	}
 
 	// check Box declaration consistency
+	if nBox == nil {
+		return
+	}
 	if nBox.nbFiber != nbFiber {
 		err.Add(fmt.Errorf("wrong Nb Fiber for box in cell %s!%s", sheetRacco, xls.RcToAxis(row, colRaccoFiber)))
 	}
 	if nBox.nbSplice != nbSplice {
 		err.Add(fmt.Errorf("wrong Nb Splice for box in cell %s!%s", sheetRacco, xls.RcToAxis(row, colRaccoSplice)))
 	}
-
 	return
 }
 

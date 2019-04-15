@@ -9,10 +9,17 @@ import (
 
 const (
 	// Moselle PM3
-	testDir           string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\JTestevuide - DESSELING PM3\Suivi PM3\`
+	//testDir           string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\JTestevuide - DESSELING PM3\Suivi PM3\`
+	//bpuFile           string = `BPU.xlsx`
+	//suiviFile         string = `DES_PM3_suivi_04-09.xlsx`
+	//suiviOutFile      string = `PM3_Suivi.xlsx`
+	//attachmentOutFile string = `PM3_Attachement.xlsx`
+
+	// Moselle PM3
+	testDir           string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\DMaussand - KEDANGE\Info\Suivi\`
 	bpuFile           string = `BPU.xlsx`
-	suiviFile         string = `DES_PM3_suivi_04-09.xlsx`
-	suiviOutFile      string = `PM3_Suivi.xlsx`
+	suiviFile         string = `KED_PM09_suivi_19-04-12  S15.xlsx`
+	suiviOutFile      string = `KED_PM09_Suivi.xlsx`
 	attachmentOutFile string = `PM3_Attachement.xlsx`
 
 	// Alsace DXC
