@@ -14,7 +14,7 @@ type BlockParser interface {
 func ParseTab(sh *xlsx.Sheet, blockParser BlockParser, s *Suivi) (err ParsingError) {
 	// Check if Catalog has related Activity Chapters
 	if s.Catalog.GetCategoryChapters(blockParser.Activity()) == nil {
-		err.Add(fmt.Errorf("no %s activity declared in BPU catalog. Skipping related Items.", blockParser.Activity()))
+		err.Add(fmt.Errorf("no %s activity declared in BPU catalog. Skipping related Items.", blockParser.Activity()), true)
 		return
 	}
 

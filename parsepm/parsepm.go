@@ -10,11 +10,18 @@ import (
 
 const (
 	// DES_PM03
-	testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\JTestevuide - DESSELING PM3\Infos PM3`
-	testBPEDir      string = `CCPE_DES_PM3_BPE`
-	testROPXlsx     string = `CCPE_DES_PM3_ROP\CCPE_DES_PM3_ROP.xlsx`
-	testCable94Xlsx string = `Quantité_CCAM_DES_PM3\CCAM_DES_PM3_9_4.xlsx`
-	testXLS         string = `DES_PM3`
+	testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\MBeck - GUE_PM03\Infos`
+	testBPEDir      string = `CCAM_GUE_PM3_BPE`
+	testROPXlsx     string = `CCAM_GUE_PM3_ROP.xlsx`
+	testCable94Xlsx string = ``
+	testXLS         string = `GUE_PM03`
+
+	// DES_PM03
+	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\JTestevuide - DESSELING PM3\Infos PM3`
+	//testBPEDir      string = `CCPE_DES_PM3_BPE`
+	//testROPXlsx     string = `CCPE_DES_PM3_ROP\CCPE_DES_PM3_ROP.xlsx`
+	//testCable94Xlsx string = `Quantité_CCAM_DES_PM3\CCAM_DES_PM3_9_4.xlsx`
+	//testXLS         string = `DES_PM3`
 
 	// KED_PM03
 	//testDir     string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM03\`
@@ -54,11 +61,13 @@ func main() {
 		pm.CreateBPETree()
 	}
 
-	cable94File := filepath.Join(testDir, testCable94Xlsx)
-	if exists(cable94File) {
-		err = pm.ParseQuantiteCableXLS(cable94File)
-		if err != nil {
-			log.Fatal("could not parse Quantité Cable 9.4 file:", err)
+	if testCable94Xlsx != "" {
+		cable94File := filepath.Join(testDir, testCable94Xlsx)
+		if exists(cable94File) {
+			err = pm.ParseQuantiteCableXLS(cable94File)
+			if err != nil {
+				log.Fatal("could not parse Quantité Cable 9.4 file:", err)
+			}
 		}
 	}
 

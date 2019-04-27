@@ -55,14 +55,14 @@ func (pp *PullingParser) ParseBlock(sh *xlsx.Sheet, catalog *bpu.Catalog, row in
 
 	// check for box declaration
 	if !(cableName != "" && tronconName != "") {
-		err.Add(fmt.Errorf("invalid cable pulling definition in line %s:%d", pp.activity, row+1))
+		err.Add(fmt.Errorf("invalid cable pulling definition in line %s:%d", pp.activity, row+1), true)
 		return
 	}
 
 	// parse cable pulling declaration line
 	items, e = pp.newItemFromXLSRow(sh, row, catalog)
 	if e != nil {
-		err.Add(e)
+		err.Add(e, true)
 	}
 
 	// parse remaining block detail lines

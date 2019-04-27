@@ -47,14 +47,14 @@ func (rm *MeasurementParser) ParseBlock(sh *xlsx.Sheet, catalog *bpu.Catalog, ro
 
 	// check for box declaration
 	if !(boxNbSplice != "" && boxNbFiber != "" && boxName != "") {
-		err.Add(fmt.Errorf("invalid Measurement definition in line %s:%d", rm.activity, row+1))
+		err.Add(fmt.Errorf("invalid Measurement definition in line %s:%d", rm.activity, row+1), true)
 		return
 	}
 
 	// parse measurement declaration line
 	items, e = rm.newItemFromXLSRow(sh, row, catalog)
 	if e != nil {
-		err.Add(e)
+		err.Add(e, true)
 	}
 
 	// parse remaining block detail lines

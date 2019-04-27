@@ -53,45 +53,48 @@ const (
 	sheetMeasure string = "Mesures"
 )
 
-func NewSuiviFromXLS(file string, catalog *bpu.Catalog) (s *Suivi, err error) {
+func NewSuiviFromXLS(file string, catalog *bpu.Catalog) (s *Suivi, perr ParsingError) {
 	xf, err := xlsx.OpenFile(file)
 	if err != nil {
+		perr.Add(err, true)
 		return
 	}
 
 	s = NewSuivi(catalog)
 
+	tabFound := false
 	// TODO parse Tirage Tab sheetTirage
 	rsh := xf.Sheet[sheetTirage]
 	if rsh == nil {
-		err = fmt.Errorf("onglet '%s' introuvable", sheetTirage)
-		return
-	}
-	perr := ParseTab(rsh, NewPullingParser(), s)
-	if perr.HasError() {
-		return nil, perr
+		perr.Add(fmt.Errorf("onglet '%s' non traité", sheetTirage), false)
+	} else {
+		tabFound = true
+		pullErr := ParseTab(rsh, NewPullingParser(), s)
+		perr.Append(pullErr)
 	}
 
 	// parse Racco Tab sheetRacco
 	rsh = xf.Sheet[sheetRacco]
 	if rsh == nil {
-		err = fmt.Errorf("onglet '%s' introuvable", sheetRacco)
-		return
-	}
-	perr = ParseTab(rsh, NewRaccoParser(), s)
-	if perr.HasError() {
-		return nil, perr
+		perr.Add(fmt.Errorf("onglet '%s' non traité", sheetRacco), false)
+	} else {
+		tabFound = true
+		raccoErr := ParseTab(rsh, NewRaccoParser(), s)
+		perr.Append(raccoErr)
 	}
 
 	// parse Mesure Tab sheetMeasure
 	msh := xf.Sheet[sheetMeasure]
 	if msh == nil {
-		err = fmt.Errorf("onglet '%s' introuvable", sheetMeasure)
-		return
+		perr.Add(fmt.Errorf("onglet '%s' non traité", sheetMeasure), false)
+	} else {
+		tabFound = true
+		measErr := ParseTab(msh, NewMeasurementParser(), s)
+		perr.Append(measErr)
 	}
-	perr = ParseTab(msh, NewMeasurementParser(), s)
-	if perr.HasError() {
-		return nil, perr
+
+	if !tabFound {
+		perr.Add(fmt.Errorf("aucun onglet traité"), true)
 	}
 
 	return

@@ -55,14 +55,14 @@ func (rp *RaccoParser) ParseBlock(sh *xlsx.Sheet, catalog *bpu.Catalog, row int)
 	}
 	// check for box declaration
 	if boxOpe != "TOTAL" {
-		err.Add(fmt.Errorf("invalid Box definition in line %s:%d", rp.activity, row+1))
+		err.Add(fmt.Errorf("invalid Box definition in line %s:%d", rp.activity, row+1), true)
 		return
 	}
 
 	// parse box declaration line
 	items, nBox, e = rp.newItemFromXLSRow(sh, row, catalog)
 	if e != nil {
-		err.Add(e)
+		err.Add(e, true)
 	}
 
 	// parse remaining block detail lines
@@ -89,10 +89,10 @@ func (rp *RaccoParser) ParseBlock(sh *xlsx.Sheet, catalog *bpu.Catalog, row int)
 		return
 	}
 	if nBox.nbFiber != nbFiber {
-		err.Add(fmt.Errorf("wrong Nb Fiber for box in cell %s!%s", sheetRacco, xls.RcToAxis(row, colRaccoFiber)))
+		err.Add(fmt.Errorf("wrong Nb Fiber for box in cell %s!%s", sheetRacco, xls.RcToAxis(row, colRaccoFiber)), true)
 	}
 	if nBox.nbSplice != nbSplice {
-		err.Add(fmt.Errorf("wrong Nb Splice for box in cell %s!%s", sheetRacco, xls.RcToAxis(row, colRaccoSplice)))
+		err.Add(fmt.Errorf("wrong Nb Splice for box in cell %s!%s", sheetRacco, xls.RcToAxis(row, colRaccoSplice)), true)
 	}
 	return
 }
@@ -100,12 +100,12 @@ func (rp *RaccoParser) ParseBlock(sh *xlsx.Sheet, catalog *bpu.Catalog, row int)
 func (rp *RaccoParser) getNbFiberAndSplice(sh *xlsx.Sheet, row int) (nbFiber, nbSplice int, err ParsingError) {
 	nbFiber, e := sh.Cell(row, colRaccoFiber).Int()
 	if e != nil {
-		err.Add(fmt.Errorf("could not parse Nb Fiber in cell %s!%s", rp.activity, xls.RcToAxis(row, colRaccoFiber)))
+		err.Add(fmt.Errorf("could not parse Nb Fiber in cell %s!%s", rp.activity, xls.RcToAxis(row, colRaccoFiber)), true)
 	}
 
 	nbSplice, e = sh.Cell(row, colRaccoSplice).Int()
 	if e != nil {
-		err.Add(fmt.Errorf("could not parse Nb Splice in cell %s!%s", rp.activity, xls.RcToAxis(row, colRaccoSplice)))
+		err.Add(fmt.Errorf("could not parse Nb Splice in cell %s!%s", rp.activity, xls.RcToAxis(row, colRaccoSplice)), true)
 	}
 	return
 }

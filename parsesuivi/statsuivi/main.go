@@ -108,9 +108,9 @@ func (gc *GuiContext) GoProcess(process func()) {
 	gc.msg = nil
 }
 
-func (gc GuiContext) AddMsgLn(msg string) {
-	gc.msgTE.AppendText(msg + "\r\n")
-}
+//func (gc GuiContext) AddMsgLn(msg string) {
+//	gc.msgTE.AppendText(msg + "\r\n")
+//}
 
 func (gc GuiContext) Logln(text string) {
 	gc.msg <- text + "\r\n"
@@ -129,7 +129,7 @@ func (gc GuiContext) BrowseXLS() {
 	dlg.Title = "Choisir un fichier de suivi"
 
 	if ok, err := dlg.ShowOpen(gc.MainWindow); err != nil {
-		gc.AddMsgLn(err.Error())
+		gc.Logln(err.Error())
 	} else if !ok {
 		return
 	}
@@ -160,7 +160,7 @@ func (gc *GuiContext) SetSuiviFile(file string) error {
 func (gc *GuiContext) SetAndProcess(file string) {
 	err := gc.SetSuiviFile(file)
 	if err != nil {
-		gc.AddMsgLn(fmt.Sprintf("Erreur : %s", err.Error()))
+		gc.Logln(fmt.Sprintf("Erreur : %s", err.Error()))
 		return
 	}
 	gc.Process()
@@ -171,15 +171,14 @@ func (gc *GuiContext) Process() {
 	print("Traitement du fichier " + file)
 	process := func() {
 		gc.processPB.SetEnabled(false)
-		gc.AddMsgLn("Traitement du fichier " + file)
-		gc.ProcessSuivi()
-		gc.AddMsgLn("Traitement terminé")
+		gc.Logln("Traitement du fichier " + file)
+		gc.Logln(gc.ProcessSuivi())
 		gc.processPB.SetEnabled(true)
 	}
 	go gc.GoProcess(process)
 }
 
-func (gc *GuiContext) ProcessSuivi() {
+func (gc *GuiContext) ProcessSuivi() string {
 	file := gc.suiviLbl.Text()
 	dir := filepath.Dir(file)
 
@@ -193,23 +192,23 @@ func (gc *GuiContext) ProcessSuivi() {
 	currentBpu, err := bpu.NewCatalogFromXLS(bpuFile)
 	if err != nil {
 		gc.Logf("Erreur : impossible de traiter le fichier '%'\r\n\t%s\r\n", bpuFile, err.Error())
-		return
+		return fmt.Sprintf("Traitement interrompu")
 	}
 
-	progress, err := suivi.NewSuiviFromXLS(file, currentBpu)
-	if err != nil {
-		gc.Logf("Erreur lors du traitement du fichier de suivi\r\n%s", err.Error())
-		return
+	progress, perr := suivi.NewSuiviFromXLS(file, currentBpu)
+	if perr.HasError() {
+		if perr.Fatal {
+			gc.Logf("Erreur lors du traitement du fichier de suivi:\r\n%s", perr.Error())
+			return fmt.Sprintf("Traitement interrompu")
+		}
+		gc.Logf("Message lors du traitement du fichier de suivi:\r\n%s", perr.Error())
 	}
 
 	err = progress.WriteSuiviXLS(suiviOutFile)
 	if err != nil {
-		gc.Logf("Erreur : impossible de mettre à jour le fichier de suivi '%s'\r\n\t%s\r\n", suiviOutFile, err.Error())
-		return
+		gc.Logf("Erreur : impossible de mettre à jour le fichier de suivi '%s':\r\n\t%s\r\n", suiviOutFile, err.Error())
+		return fmt.Sprintf("Traitement interrompu")
 	}
 
-	//err = progress.WriteAttachmentXLS(attachementOutFile)
-	//if err != nil {
-	//	gc.Logf("Erreur : impossible de mettre à jour le fichier d'attachement '%s'\r\n\t%s\r\n", attachementOutFile, err.Error())
-	//}
+	return fmt.Sprintf("Traitement terminé")
 }
