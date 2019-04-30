@@ -156,7 +156,9 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 	xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, 0), "Suivi financier")
 	xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, 1), "€ Total")
 	xf.SetCellValue(suiviSheetName, xls.RcToAxis(2, 1), "€ Fait")
-	row := 2
+	xf.SetCellValue(suiviSheetName, xls.RcToAxis(3, 1), "€ /Sem")
+	xf.SetCellValue(suiviSheetName, xls.RcToAxis(4, 1), "%")
+	row := 4
 	for _, articleName := range articleNames {
 		if nbTot[articleName] == 0 {
 			continue
@@ -164,26 +166,37 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+1, 0), articleName)
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+1, 1), "Nb Total")
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+2, 1), "Nb")
-		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+3, 1), "€ Total")
-		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+4, 1), "€ Fait")
-		row += 4
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+3, 1), "%")
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+4, 1), "€ Total")
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+5, 1), "€ Fait")
+		row += 5
 	}
-
+	prevWeekProd := 0.0
 	for col, d := range s.Dates() {
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(0, col+2), d)
 		fDone := func(item *bpu.Item) bool { return item.Done && !item.Date.After(d) }
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, col+2), valTot[global])
-		xf.SetCellValue(suiviSheetName, xls.RcToAxis(2, col+2), s.CountFloat(s.Items, fPrice, fDone))
-		row := 2
+		weekProd := s.CountFloat(s.Items, fPrice, fDone)
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(2, col+2), weekProd)
+		xf.SetCellValue(suiviSheetName, xls.RcToAxis(3, col+2), weekProd-prevWeekProd)
+		if valTot[global] > 0 {
+			xf.SetCellValue(suiviSheetName, xls.RcToAxis(4, col+2), weekProd/valTot[global])
+		} else {
+			xf.SetCellValue(suiviSheetName, xls.RcToAxis(4, col+2), 0)
+		}
+		prevWeekProd = weekProd
+		row := 4
 		for _, articleName := range articleNames {
 			if nbTot[articleName] == 0 {
 				continue
 			}
 			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+1, col+2), nbTot[articleName])
-			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+2, col+2), s.CountInt(articleNameItems[articleName], fNbQty, fDone))
-			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+3, col+2), valTot[articleName])
-			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+4, col+2), s.CountFloat(articleNameItems[articleName], fPrice, fDone))
-			row += 4
+			nb := s.CountInt(articleNameItems[articleName], fNbQty, fDone)
+			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+2, col+2), nb)
+			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+3, col+2), float64(nb)/float64(nbTot[articleName]))
+			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+4, col+2), valTot[articleName])
+			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+5, col+2), s.CountFloat(articleNameItems[articleName], fPrice, fDone))
+			row += 5
 		}
 	}
 }

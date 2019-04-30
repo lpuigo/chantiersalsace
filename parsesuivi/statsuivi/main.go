@@ -108,9 +108,9 @@ func (gc *GuiContext) GoProcess(process func()) {
 	gc.msg = nil
 }
 
-//func (gc GuiContext) AddMsgLn(msg string) {
-//	gc.msgTE.AppendText(msg + "\r\n")
-//}
+func (gc GuiContext) AddMsgLn(msg string) {
+	gc.msgTE.AppendText(msg + "\r\n")
+}
 
 func (gc GuiContext) Logln(text string) {
 	gc.msg <- text + "\r\n"
@@ -160,7 +160,7 @@ func (gc *GuiContext) SetSuiviFile(file string) error {
 func (gc *GuiContext) SetAndProcess(file string) {
 	err := gc.SetSuiviFile(file)
 	if err != nil {
-		gc.Logln(fmt.Sprintf("Erreur : %s", err.Error()))
+		gc.AddMsgLn(fmt.Sprintf("Erreur : %s", err.Error()))
 		return
 	}
 	gc.Process()

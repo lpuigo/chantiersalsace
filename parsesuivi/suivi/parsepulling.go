@@ -145,7 +145,7 @@ func (pp *PullingParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog *bpu
 		todo = true
 	case "na", "annule", "supprime", "suprime":
 		todo = false
-	case "", "nok", "ko":
+	case "", "nok", "ko", "blocage", "en cours":
 		todo = true
 	default:
 		err = fmt.Errorf(

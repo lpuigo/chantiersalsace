@@ -86,7 +86,7 @@ func (rm *MeasurementParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog 
 		todo = true
 	case "na", "annule", "supprime", "suprime":
 		todo = false
-	case "", "nok", "ko":
+	case "", "nok", "ko", "blocage", "en cours":
 		todo = true
 	default:
 		err = fmt.Errorf(
