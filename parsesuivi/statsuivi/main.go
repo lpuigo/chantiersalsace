@@ -27,35 +27,40 @@ func main() {
 	err := MainWindow{
 		AssignTo: &gc.MainWindow,
 		Title:    "EWIN Services Mise à jour du Suivi Chantier",
-		MinSize:  Size{800, 480},
+		MinSize:  Size{1000, 480},
 		OnDropFiles: func(files []string) {
 			gc.SetAndProcess(files[0])
 		},
 		Layout: VBox{},
 		Children: []Widget{
 			Composite{
-				Layout: Grid{Columns: 10, MarginsZero: true},
+				Layout: Grid{Columns: 24, MarginsZero: true},
 				Children: []Widget{
 					PushButton{
+						Column:             0,
+						ColumnSpan:         1,
+						AlwaysConsumeSpace: false,
 						Text:               "Choisir...",
-						AlwaysConsumeSpace: true,
 						OnClicked: func() {
 							gc.BrowseXLS()
 						},
 					},
-					Label{
-						Text:       "",
-						AssignTo:   &gc.suiviLbl,
-						ColumnSpan: 8,
-					},
 					PushButton{
+						Column:             1,
+						ColumnSpan:         1,
+						AlwaysConsumeSpace: false,
 						Text:               "Traitement",
 						AssignTo:           &gc.processPB,
-						AlwaysConsumeSpace: true,
 						Enabled:            false,
 						OnClicked: func() {
 							gc.Process()
 						},
+					},
+					LineEdit{
+						Text:       "",
+						AssignTo:   &gc.suiviLbl,
+						Column:     2,
+						ColumnSpan: 22,
 					},
 				},
 			},
@@ -82,7 +87,7 @@ type GuiContext struct {
 	msgTE *walk.TextEdit
 	msg   chan string
 
-	suiviLbl  *walk.Label
+	suiviLbl  *walk.LineEdit
 	processPB *walk.PushButton
 }
 
