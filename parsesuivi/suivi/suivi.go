@@ -6,6 +6,7 @@ import (
 	"github.com/lpuig/ewin/chantiersalsace/parsesuivi/bpu"
 	"github.com/lpuig/ewin/chantiersalsace/parsesuivi/xls"
 	"github.com/tealeg/xlsx"
+	"strings"
 	"time"
 )
 
@@ -48,6 +49,7 @@ func (s *Suivi) Add(items ...*bpu.Item) {
 }
 
 const (
+	catActivity  string = "Activité "
 	sheetTirage  string = "Tirage"
 	sheetRacco   string = "Racco"
 	sheetMeasure string = "Mesures"
@@ -117,24 +119,14 @@ func (s *Suivi) WriteSuiviXLS(file string) error {
 	return xf.Save()
 }
 
-func (s *Suivi) WriteAttachmentXLS(file string) error {
-	xf, err := excelize.OpenFile(file)
-	if err != nil {
-		return err
-	}
-
-	s.writeAttachmentSheet(xf)
-	xf.UpdateLinkedValue()
-	return xf.Save()
-}
-
 func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 	if xf.GetSheetIndex(suiviSheetName) == 0 {
 		xf.NewSheet(suiviSheetName)
 	}
 
-	fAll := func(item *bpu.Item) bool { return true }
-	fTodo := func(item *bpu.Item) bool { return item.Todo }
+	fAllBpu := func(item *bpu.Item) bool { return !strings.HasPrefix(item.Article.Name, catActivity) }
+	fAct := func(item *bpu.Item) bool { return strings.HasPrefix(item.Article.Name, catActivity) }
+	fTodo := func(item *bpu.Item) bool { return item.Todo && !strings.HasPrefix(item.Article.Name, catActivity) }
 	fNbQty := func(item *bpu.Item) int { return item.Quantity }
 	fPrice := func(item *bpu.Item) float64 { return item.Price() }
 
@@ -144,11 +136,13 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 
 	nbTot := make(map[string]int)
 	valTot := make(map[string]float64)
+	actTot := make(map[string]float64)
 	valTot[global] = s.CountFloat(s.Items, fPrice, fTodo)
 	articleNameItems := s.GetItems(fTodo)
 	for _, articleName := range articleNames {
-		nbTot[articleName] = s.CountInt(articleNameItems[articleName], fNbQty, fAll)
-		valTot[articleName] = s.CountFloat(articleNameItems[articleName], fPrice, fAll)
+		nbTot[articleName] = s.CountInt(articleNameItems[articleName], fNbQty, fAllBpu)
+		valTot[articleName] = s.CountFloat(articleNameItems[articleName], fPrice, fAllBpu)
+		actTot[articleName] = s.CountFloat(articleNameItems[articleName], fPrice, fAct)
 	}
 
 	// Set Dates header
@@ -160,7 +154,7 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 	xf.SetCellValue(suiviSheetName, xls.RcToAxis(4, 1), "%")
 	row := 4
 	for _, articleName := range articleNames {
-		if nbTot[articleName] == 0 {
+		if !(nbTot[articleName] != 0 && !strings.HasPrefix(articleName, catActivity)) {
 			continue
 		}
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+1, 0), articleName)
@@ -174,7 +168,9 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 	prevWeekProd := 0.0
 	for col, d := range s.Dates() {
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(0, col+2), d)
-		fDone := func(item *bpu.Item) bool { return item.Done && !item.Date.After(d) }
+		fDone := func(item *bpu.Item) bool {
+			return item.Done && !item.Date.After(d) && !strings.HasPrefix(item.Article.Name, catActivity)
+		}
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, col+2), valTot[global])
 		weekProd := s.CountFloat(s.Items, fPrice, fDone)
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(2, col+2), weekProd)
@@ -187,7 +183,7 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 		prevWeekProd = weekProd
 		row := 4
 		for _, articleName := range articleNames {
-			if nbTot[articleName] == 0 {
+			if !(nbTot[articleName] != 0 && !strings.HasPrefix(articleName, catActivity)) {
 				continue
 			}
 			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+1, col+2), nbTot[articleName])
@@ -199,66 +195,6 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 			row += 5
 		}
 	}
-}
-
-func (s *Suivi) writeAttachmentSheet(xf *excelize.File) {
-	//if xf.GetSheetIndex(attachmentSheetName) == 0 {
-	//	xf.NewSheet(attachmentSheetName)
-	//}
-	//
-	//row := 0
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), "Ref.")
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), "Prix Unit. Boitier")
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), "Quantité Boitier")
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), "Boitiers Réalisés")
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), "Prix Unit. Epissure")
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), "Quantité Epissure")
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), "Epissures Réalisées")
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), "Montant HT")
-	//
-	//row++
-	//// SRO
-	//ps, pm := priceCatalog.GetRaccoPmPrices()
-	//fTDSro := func(bpe *Bpe) bool { return bpe.ToDo && bpe.IsSro() }
-	//fSro := func(bpe *Bpe) bool { return bpe.ToDo && bpe.Done && bpe.IsSro() }
-	//fNbSro := func(bpe *Bpe) int {
-	//	nbSro, _ := bpe.GetSroNumbers(priceCatalog)
-	//	return nbSro
-	//}
-	//fNbSroMissingModule := func(bpe *Bpe) int {
-	//	_, nbMissingModule := bpe.GetSroNumbers(priceCatalog)
-	//	return nbMissingModule
-	//}
-	//fSroValue := func(bpe *Bpe) float64 { return bpe.BpeValue }
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), ps.Name)
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), ps.Price)
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), s.CountInt(fNbSro, fTDSro))
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), s.CountInt(fNbSro, fSro))
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), pm.Price)
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), s.CountInt(fNbSroMissingModule, fTDSro))
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), s.CountInt(fNbSroMissingModule, fSro))
-	//xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), s.CountFloat(fSroValue, fSro))
-	//
-	//// Bpe
-	//fNbBpe := func(bpe *Bpe) int { return 1 }
-	//fNbSplice := func(bpe *Bpe) int { return bpe.NbSplice }
-	//fValue := func(bpe *Bpe) float64 { return bpe.BpeValue + bpe.SpliceValue }
-	//for _, priceCat := range priceCatalog.Chapters {
-	//	for _, p := range priceCat {
-	//		row++
-	//		fTDBpe := func(bpe *Bpe) bool { return bpe.ToDo && bpe.PriceName == p.Name }
-	//		fBpe := func(bpe *Bpe) bool { return bpe.ToDo && bpe.Done && bpe.PriceName == p.Name }
-	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 0), p.Name)
-	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 1), p.Price)
-	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 2), s.CountInt(fNbBpe, fTDBpe))
-	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 3), s.CountInt(fNbBpe, fBpe))
-	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 4), p.GetSpliceValue(1))
-	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 5), s.CountInt(fNbSplice, fTDBpe))
-	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 6), s.CountInt(fNbSplice, fBpe))
-	//		xf.SetCellValue(attachmentSheetName, xls.RcToAxis(row, 7), s.CountFloat(fValue, fBpe))
-	//	}
-	//}
-
 }
 
 func (s *Suivi) writeProgressSheet(xf *excelize.File) {

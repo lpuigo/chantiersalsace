@@ -5,7 +5,7 @@ import (
 	"github.com/lpuig/ewin/chantiersalsace/parsesuivi/bpu"
 	"github.com/lpuig/ewin/chantiersalsace/parsesuivi/xls"
 	"github.com/tealeg/xlsx"
-	"strings"
+	"strconv"
 	"time"
 )
 
@@ -21,8 +21,8 @@ func NewMeasurementParser() *MeasurementParser {
 	}
 }
 
-func (rm *MeasurementParser) Activity() string {
-	return rm.activity
+func (mp *MeasurementParser) Activity() string {
+	return mp.activity
 }
 
 const (
@@ -31,9 +31,11 @@ const (
 	colMeasNbSplice int = 2
 	colMeasStatus   int = 6
 	colMeasDate     int = 10
+
+	catMeasurement string = "Mesure"
 )
 
-func (rm *MeasurementParser) ParseBlock(sh *xlsx.Sheet, catalog *bpu.Catalog, row int) (items []*bpu.Item, err ParsingError, nextRow int) {
+func (mp *MeasurementParser) ParseBlock(sh *xlsx.Sheet, catalog *bpu.Catalog, row int) (items []*bpu.Item, err ParsingError, nextRow int) {
 	var e error
 
 	boxName := sh.Cell(row, colMeasName).Value
@@ -47,12 +49,12 @@ func (rm *MeasurementParser) ParseBlock(sh *xlsx.Sheet, catalog *bpu.Catalog, ro
 
 	// check for box declaration
 	if !(boxNbSplice != "" && boxNbFiber != "" && boxName != "") {
-		err.Add(fmt.Errorf("invalid Measurement definition in line %s:%d", rm.activity, row+1), true)
+		err.Add(fmt.Errorf("invalid Measurement definition in line %s:%d", mp.activity, row+1), true)
 		return
 	}
 
 	// parse measurement declaration line
-	items, e = rm.newItemFromXLSRow(sh, row, catalog)
+	items, e = mp.newItemFromXLSRow(sh, row, catalog)
 	if e != nil {
 		err.Add(e, true)
 	}
@@ -72,29 +74,26 @@ func (rm *MeasurementParser) ParseBlock(sh *xlsx.Sheet, catalog *bpu.Catalog, ro
 	return
 }
 
-func (rm *MeasurementParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog *bpu.Catalog) (items []*bpu.Item, err error) {
+func (mp *MeasurementParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog *bpu.Catalog) (items []*bpu.Item, err error) {
 	boxName := sh.Cell(row, colMeasName).Value
 	boxNbFiber := sh.Cell(row, colMeasNbFiber).Value
+	tempNbFiber, perr := strconv.ParseInt(boxNbFiber, 10, 64)
+	if perr != nil {
+		err = fmt.Errorf(
+			"could not parse NbFiber from '%s' in cell %s!%s",
+			boxNbFiber,
+			mp.activity,
+			xls.RcToAxis(row, colMeasNbFiber),
+		)
+		return
+	}
+	nbFiber := int(tempNbFiber)
 	boxNbSplice := sh.Cell(row, colMeasNbSplice).Value
 	info := fmt.Sprintf("Mesure %s fibres - %s epissures", boxNbFiber, boxNbSplice)
+	ainfo := fmt.Sprintf("Activité Mesure %s fibres", boxNbFiber)
 
-	isDone := sh.Cell(row, colMeasStatus).Value
-	var done, todo bool
-	switch strings.ToLower(isDone) {
-	case "ok":
-		done = true
-		todo = true
-	case "na", "annule", "supprime", "suprime":
-		todo = false
-	case "", "nok", "ko", "blocage", "en cours":
-		todo = true
-	default:
-		err = fmt.Errorf(
-			"unknown Status '%s' in cell %s!%s",
-			isDone,
-			rm.activity,
-			xls.RcToAxis(row, colMeasStatus),
-		)
+	todo, done, err := parseStatus(sh, row, colMeasStatus)
+	if err != nil {
 		return
 	}
 
@@ -105,7 +104,7 @@ func (rm *MeasurementParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog 
 			err = fmt.Errorf(
 				"could not parse date from '%s' in cell %s!%s",
 				sh.Cell(row, colMeasDate).Value,
-				rm.activity,
+				mp.activity,
 				xls.RcToAxis(row, colMeasDate),
 			)
 			return
@@ -114,15 +113,22 @@ func (rm *MeasurementParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog 
 	}
 
 	// get relevant chapters
-	catChapters := catalog.GetCategoryChapters(rm.activity)
-	mainChapter, err := catChapters.GetChapterForSize("Mesure", 1)
+	catChapters := catalog.GetCategoryChapters(mp.activity)
+	mainChapter, err := catChapters.GetChapterForSize(catMeasurement, 1)
 	if err != nil {
 		return
 	}
 	qty1 := 1
 
 	items = append(items,
-		bpu.NewItem(rm.activity, boxName, info, idate, mainChapter, qty1, todo, done),
+		bpu.NewItem(mp.activity, boxName, info, idate, mainChapter, qty1, todo, done),
+	)
+	actChapter, err := catChapters.GetChapterForSize(catActivity+catMeasurement, 1)
+	if err != nil {
+		return
+	}
+	items = append(items,
+		bpu.NewItem(mp.activity, boxName, ainfo, idate, actChapter, nbFiber, todo, done),
 	)
 	return
 }

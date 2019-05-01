@@ -15,10 +15,10 @@ const (
 	//suiviOutFile      string = `PM3_Suivi.xlsx`
 
 	// Moselle PM3
-	testDir           string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\DMaussand - KEDANGE\Suivi`
-	bpuFile           string = `BPU.xlsx`
-	suiviFile         string = `KED_PM09_suivi 19-04-26  S16.xlsx`
-	suiviOutFile      string = `KED_PM09_Suivi.xlsx`
+	testDir      string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\DMaussand - KEDANGE\Suivi`
+	bpuFile      string = `BPU.xlsx`
+	suiviFile    string = `KED_PM09_suivi_19-04-26  S16.xlsx`
+	suiviOutFile string = `KED_PM09_Suivi.xlsx`
 
 	// Alsace DXC
 	//testDir           string = `C:\Users\Laurent\Desktop\Suivi`
@@ -48,9 +48,9 @@ func main() {
 	_ = pricecat
 	//fmt.Print(pricecat.String())
 
-	progress, err := suivi.NewSuiviFromXLS(filepath.Join(testDir, suiviFile), pricecat)
-	if err != nil {
-		log.Fatalf("%s: could not create progress: %s", suiviFile, err.Error())
+	progress, perr := suivi.NewSuiviFromXLS(filepath.Join(testDir, suiviFile), pricecat)
+	if perr.HasError() {
+		log.Fatalf("%s: could not create progress: %s", suiviFile, perr.Error())
 	}
 
 	err = progress.WriteSuiviXLS(filepath.Join(testDir, suiviOutFile))

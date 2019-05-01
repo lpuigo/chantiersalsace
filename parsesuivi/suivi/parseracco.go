@@ -36,6 +36,8 @@ const (
 	colRaccoSplice  int = 9
 	colRaccoStatus  int = 10
 	colRaccoDate    int = 14
+
+	catRaccoPM string = "PM"
 )
 
 type box struct {
@@ -111,8 +113,6 @@ func (rp *RaccoParser) getNbFiberAndSplice(sh *xlsx.Sheet, row int) (nbFiber, nb
 }
 
 func (rp *RaccoParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog *bpu.Catalog) (items []*bpu.Item, nBox *box, err error) {
-	var mainChapter, optChapter *bpu.Article
-	var qty1, qty2 int
 	var e error
 
 	name := sh.Cell(row, colRaccoName).Value
@@ -152,6 +152,7 @@ func (rp *RaccoParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog *bpu.C
 	}
 	boxSize := int(isize)
 	info := fmt.Sprintf("Install. %s: %s (%dFO)", boxCatergory, boxType, boxSize)
+	ainfo := fmt.Sprintf("Activité Install. %s: %s (%dFO)", boxCatergory, boxType, boxSize)
 
 	nbFiber, e := sh.Cell(row, colRaccoFiber).Int()
 	if e != nil {
@@ -180,23 +181,8 @@ func (rp *RaccoParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog *bpu.C
 		nbSplice: nbSplice,
 	}
 
-	isDone := sh.Cell(row, colRaccoStatus).Value
-	var done, todo bool
-	switch strings.ToLower(isDone) {
-	case "ok":
-		done = true
-		todo = true
-	case "na", "annule", "supprime", "suprime":
-		todo = false
-	case "", "nok", "ko", "blocage", "en cours":
-		todo = true
-	default:
-		err = fmt.Errorf(
-			"unknown Status '%s' in cell %s!%s",
-			isDone,
-			rp.activity,
-			xls.RcToAxis(row, colRaccoStatus),
-		)
+	todo, done, err := parseStatus(sh, row, colRaccoStatus)
+	if err != nil {
 		return
 	}
 
@@ -217,10 +203,16 @@ func (rp *RaccoParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog *bpu.C
 
 	// get relevant chapters
 	catChapters := catalog.GetCategoryChapters(rp.activity)
-	uBoxCategory := strings.ToUpper(boxCatergory)
-	switch uBoxCategory {
+
+	var mainChapter, optChapter, actMainChapter, actOptChapter *bpu.Article
+	var qty1, qty2 int
+
+	switch strings.ToUpper(boxCatergory) {
 	case "PM":
-		mainChapter, optChapter = catChapters["PM"][0], catChapters["PM"][1]
+		cat := strings.ToUpper(catRaccoPM)
+		actCat := strings.ToUpper(catActivity + catRaccoPM)
+		mainChapter, optChapter = catChapters[cat][0], catChapters[cat][1]
+		actMainChapter, actOptChapter = catChapters[actCat][0], catChapters[actCat][1]
 		qty1 = nbSplice / mainChapter.Size
 		// check for missing modules
 		qty2 = 0
@@ -231,7 +223,7 @@ func (rp *RaccoParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog *bpu.C
 		}
 
 	case "BPE", "PBO":
-		mainChapter, optChapter, e = getRaccoBoxChapters(catalog, rp.activity, boxCatergory, boxType)
+		mainChapter, optChapter, actMainChapter, actOptChapter, e = getRaccoBoxChapters(catalog, rp.activity, boxCatergory, boxType)
 		qty1, qty2 = 1, nbSplice
 		if e != nil {
 			panic(e.Error())
@@ -245,16 +237,24 @@ func (rp *RaccoParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog *bpu.C
 	items = append(items,
 		bpu.NewItem(rp.activity, name, info, idate, mainChapter, qty1, todo, done),
 	)
+	items = append(items,
+		bpu.NewItem(rp.activity, name, ainfo, idate, actMainChapter, qty1, todo, done),
+	)
 	if optChapter != nil {
 		items = append(items,
 			bpu.NewItem(rp.activity, name, info, idate, optChapter, qty2, todo, done),
+		)
+	}
+	if actOptChapter != nil {
+		items = append(items,
+			bpu.NewItem(rp.activity, name, ainfo, idate, actOptChapter, qty2, todo, done),
 		)
 	}
 	return
 }
 
 // getRaccoBoxChapters returns Article applicable for given Bpe or Pbo type
-func getRaccoBoxChapters(catalog *bpu.Catalog, activity, cat, boxType string) (boxChapter, spliceChapter *bpu.Article, err error) {
+func getRaccoBoxChapters(catalog *bpu.Catalog, activity, cat, boxType string) (boxChapter, spliceChapter, actBoxChapter, actSpliceChapter *bpu.Article, err error) {
 	// box lookup
 	box := catalog.GetBox(cat, boxType)
 	if box == nil {
@@ -278,8 +278,20 @@ func getRaccoBoxChapters(catalog *bpu.Catalog, activity, cat, boxType string) (b
 		if err != nil {
 			return
 		}
+		actBoxChapter, err = catChapters.GetChapterForSize(catActivity+cat, box.Size)
+		if err != nil {
+			return
+		}
+		actSpliceChapter, err = catChapters.GetChapterForSize(catActivity+cat+" Splice", box.Size)
+		if err != nil {
+			return
+		}
 	case "PBO":
 		boxChapter, err = catChapters.GetChapterForSize(cat+" "+box.Usage, box.Size)
+		if err != nil {
+			return
+		}
+		actBoxChapter, err = catChapters.GetChapterForSize(catActivity+cat+" "+box.Usage, box.Size)
 		if err != nil {
 			return
 		}

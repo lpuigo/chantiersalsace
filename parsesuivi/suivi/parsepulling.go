@@ -137,23 +137,8 @@ func (pp *PullingParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog *bpu
 		return
 	}
 
-	isDone := sh.Cell(row, colTirageStatus).Value
-	var done, todo bool
-	switch strings.ToLower(isDone) {
-	case "ok":
-		done = true
-		todo = true
-	case "na", "annule", "supprime", "suprime":
-		todo = false
-	case "", "nok", "ko", "blocage", "en cours":
-		todo = true
-	default:
-		err = fmt.Errorf(
-			"unknown Status '%s' in cell %s!%s",
-			isDone,
-			pp.activity,
-			xls.RcToAxis(row, colTirageStatus),
-		)
+	todo, done, err := parseStatus(sh, row, colTirageStatus)
+	if err != nil {
 		return
 	}
 
@@ -191,6 +176,21 @@ func (pp *PullingParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog *bpu
 		items = append(items,
 			bpu.NewItem(pp.activity, tronconName, info, idate, chapter, loveLength+undergroundLength, todo, done),
 		)
+
+		achapter, e := catChapters.GetChapterForSize(catActivity+catPullUnderground, cableSize)
+		if e != nil {
+			err = fmt.Errorf(
+				"could not define activity chapter: '%s' in line %s:%d",
+				e.Error(),
+				pp.activity,
+				row+1,
+			)
+			return
+		}
+		ainfo := fmt.Sprintf("Activité Tirage %s (%dml)", cableType, loveLength+undergroundLength)
+		items = append(items,
+			bpu.NewItem(pp.activity, tronconName, ainfo, idate, achapter, loveLength+undergroundLength, todo, done),
+		)
 	}
 
 	// Item for Aerial cable pulling
@@ -209,6 +209,21 @@ func (pp *PullingParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog *bpu
 		items = append(items,
 			bpu.NewItem(pp.activity, tronconName, info, idate, chapter, aerialLength+facadeLength, todo, done),
 		)
+
+		achapter, e := catChapters.GetChapterForSize(catActivity+catPullAerial, cableSize)
+		if e != nil {
+			err = fmt.Errorf(
+				"could not define activity chapter: '%s' in line %s:%d",
+				e.Error(),
+				pp.activity,
+				row+1,
+			)
+			return
+		}
+		ainfo := fmt.Sprintf("Activité Tirage %s (%dml)", cableType, aerialLength+facadeLength)
+		items = append(items,
+			bpu.NewItem(pp.activity, tronconName, ainfo, idate, achapter, aerialLength+facadeLength, todo, done),
+		)
 	}
 
 	// Item for Facade cable pulling
@@ -226,6 +241,21 @@ func (pp *PullingParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog *bpu
 		info := fmt.Sprintf("Tirage %s (%dml)", cableType, facadeLength)
 		items = append(items,
 			bpu.NewItem(pp.activity, tronconName, info, idate, chapter, facadeLength, todo, done),
+		)
+
+		achapter, e := catChapters.GetChapterForSize(catActivity+catPullFacade, cableSize)
+		if e != nil {
+			err = fmt.Errorf(
+				"could not define activity chapter: '%s' in line %s:%d",
+				e.Error(),
+				pp.activity,
+				row+1,
+			)
+			return
+		}
+		ainfo := fmt.Sprintf("Activité Tirage %s (%dml)", cableType, facadeLength)
+		items = append(items,
+			bpu.NewItem(pp.activity, tronconName, ainfo, idate, achapter, facadeLength, todo, done),
 		)
 	}
 

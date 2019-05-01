@@ -6,12 +6,12 @@ import (
 	"github.com/tealeg/xlsx"
 )
 
-type BlockParser interface {
+type ParseBlocker interface {
 	Activity() string
 	ParseBlock(sh *xlsx.Sheet, catalog *bpu.Catalog, row int) (items []*bpu.Item, err ParsingError, nextRow int)
 }
 
-func ParseTab(sh *xlsx.Sheet, blockParser BlockParser, s *Suivi) (err ParsingError) {
+func ParseTab(sh *xlsx.Sheet, blockParser ParseBlocker, s *Suivi) (err ParsingError) {
 	// Check if Catalog has related Activity Chapters
 	if s.Catalog.GetCategoryChapters(blockParser.Activity()) == nil {
 		err.Add(fmt.Errorf("no %s activity declared in BPU catalog. Skipping related Items.", blockParser.Activity()), true)
