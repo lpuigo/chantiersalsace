@@ -6,7 +6,6 @@ import (
 	"github.com/lpuig/ewin/chantiersalsace/parsesuivi/bpu"
 	"github.com/lpuig/ewin/chantiersalsace/parsesuivi/xls"
 	"github.com/tealeg/xlsx"
-	"strings"
 	"time"
 )
 
@@ -49,7 +48,6 @@ func (s *Suivi) Add(items ...*bpu.Item) {
 }
 
 const (
-	catActivity  string = "Activité "
 	sheetTirage  string = "Tirage"
 	sheetRacco   string = "Racco"
 	sheetMeasure string = "Mesures"
@@ -104,6 +102,7 @@ func NewSuiviFromXLS(file string, catalog *bpu.Catalog) (s *Suivi, perr ParsingE
 
 const (
 	suiviSheetName      string = "Suivi"
+	workSheetName       string = "Travail"
 	progressSheetName   string = "Avancement"
 	attachmentSheetName string = "Attachement"
 	global              string = "Global"
@@ -115,6 +114,7 @@ func (s *Suivi) WriteSuiviXLS(file string) error {
 		return err
 	}
 	s.writeSuiviSheet(xf)
+	s.writeWorkSheet(xf)
 	s.writeProgressSheet(xf)
 	return xf.Save()
 }
@@ -124,9 +124,9 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 		xf.NewSheet(suiviSheetName)
 	}
 
-	fAllBpu := func(item *bpu.Item) bool { return !strings.HasPrefix(item.Article.Name, catActivity) }
-	fAct := func(item *bpu.Item) bool { return strings.HasPrefix(item.Article.Name, catActivity) }
-	fTodo := func(item *bpu.Item) bool { return item.Todo && !strings.HasPrefix(item.Article.Name, catActivity) }
+	fArticleName := func(item *bpu.Item) string { return item.Article.Name }
+	fAllBpu := func(item *bpu.Item) bool { return true }
+	fTodo := func(item *bpu.Item) bool { return item.Todo }
 	fNbQty := func(item *bpu.Item) int { return item.Quantity }
 	fPrice := func(item *bpu.Item) float64 { return item.Price() }
 
@@ -136,13 +136,11 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 
 	nbTot := make(map[string]int)
 	valTot := make(map[string]float64)
-	actTot := make(map[string]float64)
 	valTot[global] = s.CountFloat(s.Items, fPrice, fTodo)
-	articleNameItems := s.GetItems(fTodo)
+	articleNameItems := s.GetItems(fArticleName, fTodo)
 	for _, articleName := range articleNames {
 		nbTot[articleName] = s.CountInt(articleNameItems[articleName], fNbQty, fAllBpu)
 		valTot[articleName] = s.CountFloat(articleNameItems[articleName], fPrice, fAllBpu)
-		actTot[articleName] = s.CountFloat(articleNameItems[articleName], fPrice, fAct)
 	}
 
 	// Set Dates header
@@ -154,7 +152,7 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 	xf.SetCellValue(suiviSheetName, xls.RcToAxis(4, 1), "%")
 	row := 4
 	for _, articleName := range articleNames {
-		if !(nbTot[articleName] != 0 && !strings.HasPrefix(articleName, catActivity)) {
+		if nbTot[articleName] == 0 {
 			continue
 		}
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+1, 0), articleName)
@@ -169,7 +167,7 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 	for col, d := range s.Dates() {
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(0, col+2), d)
 		fDone := func(item *bpu.Item) bool {
-			return item.Done && !item.Date.After(d) && !strings.HasPrefix(item.Article.Name, catActivity)
+			return item.Done && !item.Date.After(d)
 		}
 		xf.SetCellValue(suiviSheetName, xls.RcToAxis(1, col+2), valTot[global])
 		weekProd := s.CountFloat(s.Items, fPrice, fDone)
@@ -183,7 +181,7 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 		prevWeekProd = weekProd
 		row := 4
 		for _, articleName := range articleNames {
-			if !(nbTot[articleName] != 0 && !strings.HasPrefix(articleName, catActivity)) {
+			if nbTot[articleName] == 0 {
 				continue
 			}
 			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+1, col+2), nbTot[articleName])
@@ -193,6 +191,126 @@ func (s *Suivi) writeSuiviSheet(xf *excelize.File) {
 			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+4, col+2), valTot[articleName])
 			xf.SetCellValue(suiviSheetName, xls.RcToAxis(row+5, col+2), s.CountFloat(articleNameItems[articleName], fPrice, fDone))
 			row += 5
+		}
+	}
+}
+
+func (s *Suivi) writeWorkSheet(xf *excelize.File) {
+	if xf.GetSheetIndex(workSheetName) == 0 {
+		xf.NewSheet(workSheetName)
+	}
+
+	fArticleName := func(item *bpu.Item) string { return item.Article.Name }
+	fActivity := func(item *bpu.Item) string { return item.Activity }
+	fAllItems := func(item *bpu.Item) bool { return true }
+	fTodoItems := func(item *bpu.Item) bool { return item.Todo }
+	fWorkQty := func(item *bpu.Item) int { return item.WorkQuantity }
+	fWork := func(item *bpu.Item) float64 { return item.Work() }
+
+	activities := []string{sheetTirage, sheetRacco, sheetMeasure}
+	articleNames := []string{}
+	for _, activity := range activities {
+		articleNames = append(articleNames, s.Catalog.GetArticleNames(activity)...)
+	}
+
+	nbAct := make(map[string]int)
+	valAct := make(map[string]float64)
+	activityItems := s.GetItems(fActivity, fTodoItems)
+	for _, activity := range activities {
+		nbAct[activity] = s.CountInt(activityItems[activity], fWorkQty, fAllItems)
+		valAct[activity] = s.CountFloat(activityItems[activity], fWork, fAllItems)
+	}
+
+	nbTot := make(map[string]int)
+	valTot := make(map[string]float64)
+	valTot[global] = s.CountFloat(s.Items, fWork, fTodoItems)
+	articleNameItems := s.GetItems(fArticleName, fTodoItems)
+	for _, articleName := range articleNames {
+		nbTot[articleName] = s.CountInt(articleNameItems[articleName], fWorkQty, fAllItems)
+		valTot[articleName] = s.CountFloat(articleNameItems[articleName], fWork, fAllItems)
+	}
+
+	// Set Info cols
+	// Global
+	xf.SetCellValue(workSheetName, xls.RcToAxis(0, 1), "Semaines")
+	xf.SetCellValue(workSheetName, xls.RcToAxis(1, 0), "Travail")
+	xf.SetCellValue(workSheetName, xls.RcToAxis(1, 1), "Total")
+	xf.SetCellValue(workSheetName, xls.RcToAxis(2, 1), "Fait")
+	xf.SetCellValue(workSheetName, xls.RcToAxis(3, 1), "%")
+	xf.SetCellValue(workSheetName, xls.RcToAxis(4, 1), "/Sem")
+	xf.SetCellValue(workSheetName, xls.RcToAxis(5, 1), "Effectif")
+	xf.SetCellValue(workSheetName, xls.RcToAxis(6, 1), "% Eff.")
+	// per Activities
+	row := 6
+	for _, activity := range activities {
+		if nbAct[activity] == 0 {
+			row += 5
+			continue
+		}
+		xf.SetCellValue(workSheetName, xls.RcToAxis(row+1, 0), activity)
+		xf.SetCellValue(workSheetName, xls.RcToAxis(row+1, 1), "Total")
+		xf.SetCellValue(workSheetName, xls.RcToAxis(row+2, 1), "%")
+		xf.SetCellValue(workSheetName, xls.RcToAxis(row+3, 1), "/Sem")
+		xf.SetCellValue(workSheetName, xls.RcToAxis(row+4, 1), "Effectif")
+		xf.SetCellValue(workSheetName, xls.RcToAxis(row+5, 1), "% Eff.")
+		row += 5
+	}
+
+	// per Article Names
+	for _, articleName := range articleNames {
+		if nbTot[articleName] == 0 {
+			continue
+		}
+		xf.SetCellValue(workSheetName, xls.RcToAxis(row+1, 0), articleName)
+		xf.SetCellValue(workSheetName, xls.RcToAxis(row+1, 1), "Total")
+		xf.SetCellValue(workSheetName, xls.RcToAxis(row+2, 1), "%")
+		xf.SetCellValue(workSheetName, xls.RcToAxis(row+3, 1), "/Sem")
+		row += 3
+	}
+	prevWeekProd := 0.0
+	prevWeekProdFor := make(map[string]float64)
+	for col, d := range s.Dates() {
+		xf.SetCellValue(workSheetName, xls.RcToAxis(0, col+2), d)
+		fDoneItems := func(item *bpu.Item) bool {
+			return item.Done && !item.Date.After(d)
+		}
+		xf.SetCellValue(workSheetName, xls.RcToAxis(1, col+2), valTot[global])
+		weekProd := s.CountFloat(s.Items, fWork, fDoneItems)
+		xf.SetCellValue(workSheetName, xls.RcToAxis(2, col+2), weekProd)
+		if valTot[global] > 0 {
+			xf.SetCellValue(workSheetName, xls.RcToAxis(3, col+2), weekProd/valTot[global])
+		} else {
+			xf.SetCellValue(workSheetName, xls.RcToAxis(3, col+2), 0)
+		}
+		xf.SetCellValue(workSheetName, xls.RcToAxis(4, col+2), weekProd-prevWeekProd)
+		prevWeekProd = weekProd
+		row := 6
+		for _, activity := range activities {
+			if nbAct[activity] == 0 {
+				row += 5
+				continue
+			}
+			xf.SetCellValue(workSheetName, xls.RcToAxis(row+1, col+2), valAct[activity])
+			nb := s.CountFloat(activityItems[activity], fWork, fDoneItems)
+			if valAct[activity] > 0 {
+				xf.SetCellValue(workSheetName, xls.RcToAxis(row+2, col+2), nb/valAct[activity])
+			} else {
+				xf.SetCellValue(workSheetName, xls.RcToAxis(row+2, col+2), 0.0)
+			}
+			xf.SetCellValue(workSheetName, xls.RcToAxis(row+3, col+2), nb-prevWeekProdFor[activity])
+			prevWeekProdFor[activity] = nb
+			row += 5
+		}
+		for _, articleName := range articleNames {
+			if nbTot[articleName] == 0 {
+				continue
+			}
+			xf.SetCellValue(workSheetName, xls.RcToAxis(row+1, col+2), valTot[articleName])
+			nb := s.CountFloat(articleNameItems[articleName], fWork, fDoneItems)
+			xf.SetCellValue(workSheetName, xls.RcToAxis(row+2, col+2), nb)
+			xf.SetCellValue(workSheetName, xls.RcToAxis(row+3, col+2), nb-prevWeekProdFor[articleName])
+			prevWeekProdFor[articleName] = nb
+			row += 3
 		}
 	}
 }
@@ -238,11 +356,11 @@ func (s *Suivi) Dates() []time.Time {
 	return res
 }
 
-func (s *Suivi) GetItems(keep func(item *bpu.Item) bool) map[string][]*bpu.Item {
+func (s *Suivi) GetItems(info func(item *bpu.Item) string, keep func(item *bpu.Item) bool) map[string][]*bpu.Item {
 	res := make(map[string][]*bpu.Item)
 	for _, item := range s.Items {
 		if keep(item) {
-			res[item.Article.Name] = append(res[item.Article.Name], item)
+			res[info(item)] = append(res[info(item)], item)
 		}
 	}
 	return res

@@ -4,6 +4,7 @@ type Article struct {
 	Name  string
 	Size  int
 	Price float64
+	Work  float64
 }
 
 func NewChapter() *Article {

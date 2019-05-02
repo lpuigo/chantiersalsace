@@ -55,6 +55,7 @@ const (
 	colPricesName
 	colPricesSize
 	colPricesPrice
+	colPricesWork
 	colPricesEnd
 )
 
@@ -101,10 +102,17 @@ func parseChapterRow(sh *xlsx.Sheet, row int) (p *Article, err error) {
 		err = fmt.Errorf("could not get price info '%s' in sheet '%s!%s'", cSize.Value, bpuPriceSheetName, xls.RcToAxis(row, colPricesPrice))
 		return
 	}
+	cWork := sh.Cell(row, colPricesWork)
+	work, e := cWork.Float()
+	if e != nil {
+		err = fmt.Errorf("could not get work info '%s' in sheet '%s!%s'", cSize.Value, bpuPriceSheetName, xls.RcToAxis(row, colPricesWork))
+		return
+	}
 	p = NewChapter()
 	p.Name = sh.Cell(row, colPricesName).Value
 	p.Size = size
 	p.Price = price
+	p.Work = work
 	return
 }
 

@@ -6,26 +6,28 @@ import (
 )
 
 type Item struct {
-	Activity string // Racco, Tirage, ...
-	Name     string // PTxxx, Cablezzz, ...
-	Info     string // BoxType + nbFO ...
-	Date     time.Time
-	Article  *Article
-	Quantity int
-	Todo     bool
-	Done     bool
+	Activity     string // Racco, Tirage, ...
+	Name         string // PTxxx, Cablezzz, ...
+	Info         string // BoxType + nbFO ...
+	Date         time.Time
+	Article      *Article
+	Quantity     int
+	WorkQuantity int
+	Todo         bool
+	Done         bool
 }
 
-func NewItem(activity, name, info string, date time.Time, chapter *Article, quantity int, todo, done bool) *Item {
+func NewItem(activity, name, info string, date time.Time, chapter *Article, quantity, workQuantity int, todo, done bool) *Item {
 	return &Item{
-		Activity: activity,
-		Name:     name,
-		Info:     info,
-		Date:     date,
-		Article:  chapter,
-		Quantity: quantity,
-		Todo:     todo,
-		Done:     done,
+		Activity:     activity,
+		Name:         name,
+		Info:         info,
+		Date:         date,
+		Article:      chapter,
+		Quantity:     quantity,
+		WorkQuantity: workQuantity,
+		Todo:         todo,
+		Done:         done,
 	}
 }
 
@@ -43,4 +45,9 @@ func (i *Item) String() string {
 // Price returns the price for the given item
 func (i *Item) Price() float64 {
 	return i.Article.Price * float64(i.Quantity)
+}
+
+// Price returns the price for the given item
+func (i *Item) Work() float64 {
+	return i.Article.Work * float64(i.WorkQuantity)
 }

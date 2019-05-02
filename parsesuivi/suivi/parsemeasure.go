@@ -90,7 +90,6 @@ func (mp *MeasurementParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog 
 	nbFiber := int(tempNbFiber)
 	boxNbSplice := sh.Cell(row, colMeasNbSplice).Value
 	info := fmt.Sprintf("Mesure %s fibres - %s epissures", boxNbFiber, boxNbSplice)
-	ainfo := fmt.Sprintf("Activité Mesure %s fibres", boxNbFiber)
 
 	todo, done, err := parseStatus(sh, row, colMeasStatus)
 	if err != nil {
@@ -121,14 +120,7 @@ func (mp *MeasurementParser) newItemFromXLSRow(sh *xlsx.Sheet, row int, catalog 
 	qty1 := 1
 
 	items = append(items,
-		bpu.NewItem(mp.activity, boxName, info, idate, mainChapter, qty1, todo, done),
-	)
-	actChapter, err := catChapters.GetChapterForSize(catActivity+catMeasurement, 1)
-	if err != nil {
-		return
-	}
-	items = append(items,
-		bpu.NewItem(mp.activity, boxName, ainfo, idate, actChapter, nbFiber, todo, done),
+		bpu.NewItem(mp.activity, boxName, info, idate, mainChapter, qty1, nbFiber, todo, done),
 	)
 	return
 }
