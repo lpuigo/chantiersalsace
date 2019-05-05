@@ -1,8 +1,10 @@
 package zone
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/lpuig/ewin/chantiersalsace/parsepm/node"
+	"github.com/lpuig/ewin/doe/website/backend/model/ripsites"
 	"github.com/tealeg/xlsx"
 	"os"
 	"path/filepath"
@@ -287,4 +289,173 @@ func (z *Zone) ParseQuantiteCableXLS(file string) error {
 		}
 	}
 	return nil
+}
+
+func (z *Zone) WriteJSON(dir, name string) error {
+	if len(z.Nodes) == 0 {
+		return fmt.Errorf("zone is empty, nothing to write to Json")
+	}
+	file := filepath.Join(dir, name+".json")
+
+	site := ripsites.Site{
+		Id:           0,
+		Client:       "UNDEFINED",
+		Ref:          name,
+		Manager:      "UNDEFINED",
+		OrderDate:    "YYYY-MM-DD",
+		Status:       "UNDEFINED",
+		Comment:      "TO BE DEFINED",
+		Nodes:        make(map[string]*ripsites.Node),
+		Troncons:     make(map[string]*ripsites.Troncon),
+		Pullings:     nil,
+		Junctions:    nil,
+		Measurements: nil,
+	}
+
+	z.addSiteNodes(&site)
+	z.addSiteTroncon(&site)
+
+	z.addSitePullings(&site)
+	z.addSiteJunctions(&site)
+	z.addSiteMeasurements(&site)
+
+	f, err := os.Create(file)
+	if err != nil {
+		return fmt.Errorf("could not create file:%s\n", err.Error())
+	}
+	return json.NewEncoder(f).Encode(&site)
+}
+
+func (z *Zone) addSiteNodes(site *ripsites.Site) {
+	for _, node := range z.Nodes {
+		siteNode := &ripsites.Node{
+			Name:          node.PtName,
+			Address:       node.Address,
+			Type:          node.LocationType,
+			BoxType:       node.BPEType,
+			Ref:           node.Name,
+			TronconInName: node.TronconIn.Name,
+			DistFromPm:    node.DistFromPM,
+		}
+		site.Nodes[siteNode.Name] = siteNode
+	}
+}
+
+func (z *Zone) addSiteTroncon(site *ripsites.Site) {
+	for _, troncon := range z.Troncons {
+		siteTroncon := &ripsites.Troncon{
+			Name: troncon.Name,
+			Size: troncon.Capa,
+		}
+		site.Troncons[siteTroncon.Name] = siteTroncon
+	}
+}
+
+func (z *Zone) addSitePullings(site *ripsites.Site) {
+	state := ripsites.State{
+		Status: ripsites.StateToDo,
+	}
+
+	for _, cable := range z.Cables {
+		sitePulling := &ripsites.Pulling{
+			CableName: cable.Troncons[0].CableType,
+			Chuncks:   nil,
+			State:     state,
+		}
+		for _, tr := range cable.Troncons {
+			chunck := ripsites.PullingChunk{
+				TronconName:      tr.Name,
+				StartingNodeName: tr.NodeSource.PtName,
+				EndingNodeName:   tr.NodeDest.PtName,
+				LoveDist:         tr.LoveLength,
+				UndergroundDist:  tr.UndergroundLength,
+				AerialDist:       tr.AerialLength,
+				BuildingDist:     tr.FacadeLength,
+				State:            state,
+			}
+			sitePulling.Chuncks = append(sitePulling.Chuncks, chunck)
+		}
+		site.Pullings = append(site.Pullings, sitePulling)
+	}
+}
+
+func (z *Zone) addSiteJunctions(site *ripsites.Site) {
+	if len(z.Sro.Children) > 0 {
+		addJunction(z.Sro, site)
+	} else {
+		for _, rootnode := range z.NodeRoots {
+			addJunction(rootnode, site)
+		}
+	}
+}
+
+func addJunction(n *node.Node, site *ripsites.Site) {
+	state := ripsites.State{
+		Status: ripsites.StateToDo,
+	}
+	junction := &ripsites.Junction{
+		NodeName:   n.PtName,
+		Operations: nil,
+		State:      state,
+	}
+
+	for _, opname := range n.Operations() {
+		opeType, trName := "", ""
+		lOpName := strings.ToLower(opname)
+		switch {
+		case strings.HasPrefix(lOpName, "att"):
+			opeType = "Attente"
+			trName = ""
+		case strings.HasPrefix(lOpName, "epi"):
+			opeType = "Epissure"
+			if strings.Contains(opname, "->") {
+				trName = strings.Split(opname, "->")[1]
+			}
+		case strings.HasPrefix(lOpName, "pas"):
+			opeType = "Passage"
+			if strings.Contains(opname, "->") {
+				trName = strings.Split(opname, "->")[1]
+			}
+		}
+		e, o := n.GetOperationNumbers(opname)
+		operation := ripsites.Operation{
+			Type:        opeType,
+			TronconName: trName,
+			NbFiber:     o + e,
+			NbSplice:    e,
+			State:       state,
+		}
+		junction.Operations = append(junction.Operations, operation)
+	}
+
+	site.Junctions = append(site.Junctions, junction)
+
+	for _, cnode := range n.GetChildren() {
+		addJunction(cnode, site)
+	}
+}
+
+func (z *Zone) addSiteMeasurements(site *ripsites.Site) {
+	z.addMeasurement(z.Sro, site)
+}
+
+func (z *Zone) addMeasurement(n *node.Node, site *ripsites.Site) {
+	wf := n.GetWaitingFiber()
+	if wf > 0 {
+		state := ripsites.State{
+			Status: ripsites.StateToDo,
+		}
+		measurement := &ripsites.Measurement{
+			DestNodeName: n.PtName,
+			NbFiber:      wf,
+			Dist:         n.DistFromPM,
+			NodeNames:    n.SplicePT,
+			State:        state,
+		}
+		site.Measurements = append(site.Measurements, measurement)
+	}
+
+	for _, cnode := range n.GetChildren() {
+		z.addMeasurement(cnode, site)
+	}
 }

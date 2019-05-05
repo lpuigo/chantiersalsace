@@ -10,11 +10,11 @@ import (
 
 const (
 	// DES_PM03
-	testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\MBeck - GUE_PM03\Infos`
-	testBPEDir      string = `CCAM_GUE_PM3_BPE`
-	testROPXlsx     string = `CCAM_GUE_PM3_ROP.xlsx`
-	testCable94Xlsx string = ``
-	testXLS         string = `GUE_PM03`
+	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\MBeck - GUE_PM03\Infos`
+	//testBPEDir      string = `CCAM_GUE_PM3_BPE`
+	//testROPXlsx     string = `CCAM_GUE_PM3_ROP.xlsx`
+	//testCable94Xlsx string = ``
+	//testXLS         string = `GUE_PM03`
 
 	// DES_PM03
 	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\JTestevuide - DESSELING PM3\Infos PM3`
@@ -31,11 +31,11 @@ const (
 	//testXLS     string = `KED_PM03`
 
 	// KED_PM09
-	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM09\`
-	//testBPEDir      string = `CCAM_KED_PM09_BPE`
-	//testROPXlsx     string = `CCAM_KED_PM09_ROP\CCAM_KED_PM09_ROP.xlsx`
-	//testCable94Xlsx string = `Quantité_CCAM_KED_PM09\CCAM_KED_PM09_9_4.xlsx`
-	//testXLS         string = `KED_PM09`
+	testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM09\`
+	testBPEDir      string = `CCAM_KED_PM09_BPE`
+	testROPXlsx     string = `CCAM_KED_PM09_ROP\CCAM_KED_PM09_ROP.xlsx`
+	testCable94Xlsx string = `Quantité_CCAM_KED_PM09\CCAM_KED_PM09_9_4.xlsx`
+	testXLS         string = `KED_PM09`
 )
 
 func main() {
@@ -74,6 +74,11 @@ func main() {
 	err = pm.WriteXLS(testDir, testXLS)
 	if err != nil {
 		log.Fatal("could not write XLSx :", err)
+	}
+
+	err = pm.WriteJSON(testDir, testXLS)
+	if err != nil {
+		log.Fatal("could not write JSON file :", err)
 	}
 }
 
