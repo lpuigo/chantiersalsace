@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/lpuig/ewin/chantiersalsace/parsepm/node"
 	"github.com/lpuig/ewin/doe/website/backend/model/ripsites"
+	"github.com/lpuig/ewin/doe/website/frontend/model/ripsite/ripconst"
 	"github.com/tealeg/xlsx"
 	"os"
 	"path/filepath"
@@ -38,6 +39,13 @@ const (
 )
 
 func (z *Zone) ParseBPEDir(dir string) error {
+	fs, err := os.Stat(dir)
+	if err != nil {
+		return err
+	}
+	if !fs.IsDir() {
+		return fmt.Errorf("'%s' is not a directory", dir)
+	}
 	parseBlobPattern := filepath.Join(dir, blobpattern)
 	files, err := filepath.Glob(parseBlobPattern)
 	if err != nil {
@@ -353,7 +361,7 @@ func (z *Zone) addSiteTroncon(site *ripsites.Site) {
 
 func (z *Zone) addSitePullings(site *ripsites.Site) {
 	state := ripsites.State{
-		Status: ripsites.StateToDo,
+		Status: ripconst.StateToDo,
 	}
 
 	for _, cable := range z.Cables {
@@ -391,7 +399,7 @@ func (z *Zone) addSiteJunctions(site *ripsites.Site) {
 
 func addJunction(n *node.Node, site *ripsites.Site) {
 	state := ripsites.State{
-		Status: ripsites.StateToDo,
+		Status: ripconst.StateToDo,
 	}
 	junction := &ripsites.Junction{
 		NodeName:   n.PtName,
@@ -443,7 +451,7 @@ func (z *Zone) addMeasurement(n *node.Node, site *ripsites.Site) {
 	wf := n.GetWaitingFiber()
 	if wf > 0 {
 		state := ripsites.State{
-			Status: ripsites.StateToDo,
+			Status: ripconst.StateToDo,
 		}
 		measurement := &ripsites.Measurement{
 			DestNodeName: n.PtName,

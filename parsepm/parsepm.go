@@ -24,18 +24,25 @@ const (
 	//testXLS         string = `DES_PM3`
 
 	// KED_PM03
-	//testDir     string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM03\`
+	//testDir     string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM03\`
 	//testBPEDir  string = `CCAM_KED_PM03_BPE`
 	//testROPXlsx string = `CCAM_KED_PM03_ROP\CCAM_KED_PM03_ROP.xlsx`
 	//testCable94Xlsx string = `Quantité_CCAM_KED_PM03\CCAM_KED_PM03_9_4.xlsx`
 	//testXLS     string = `KED_PM03`
 
+	// KED_PM03
+	testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\DMaussand - KEDANGE\Info\CCAM-KED-PM08\CCAM_KED_PM08`
+	testBPEDir      string = `CCAM_KED_PM08_BPE`
+	testROPXlsx     string = `CCAM_KED_PM08_ROP\CCAM_KED_PM08_ROP.xlsx`
+	testCable94Xlsx string = `Quantité_CCAM_KED_PM08\CCAM_KED_PM08_9_4.xlsx`
+	testXLS         string = `KED_PM08`
+
 	// KED_PM09
-	testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM09\`
-	testBPEDir      string = `CCAM_KED_PM09_BPE`
-	testROPXlsx     string = `CCAM_KED_PM09_ROP\CCAM_KED_PM09_ROP.xlsx`
-	testCable94Xlsx string = `Quantité_CCAM_KED_PM09\CCAM_KED_PM09_9_4.xlsx`
-	testXLS         string = `KED_PM09`
+	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM09\`
+	//testBPEDir      string = `CCAM_KED_PM09_BPE`
+	//testROPXlsx     string = `CCAM_KED_PM09_ROP\CCAM_KED_PM09_ROP.xlsx`
+	//testCable94Xlsx string = `Quantité_CCAM_KED_PM09\CCAM_KED_PM09_9_4.xlsx`
+	//testXLS         string = `KED_PM09`
 )
 
 func main() {
@@ -63,11 +70,12 @@ func main() {
 
 	if testCable94Xlsx != "" {
 		cable94File := filepath.Join(testDir, testCable94Xlsx)
-		if exists(cable94File) {
-			err = pm.ParseQuantiteCableXLS(cable94File)
-			if err != nil {
-				log.Fatal("could not parse Quantité Cable 9.4 file:", err)
-			}
+		if !exists(cable94File) {
+			log.Fatal("cable file '%s' does not exist\n", cable94File)
+		}
+		err = pm.ParseQuantiteCableXLS(cable94File)
+		if err != nil {
+			log.Fatal("could not parse Quantité Cable 9.4 file:", err)
 		}
 	}
 
