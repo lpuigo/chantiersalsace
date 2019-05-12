@@ -311,7 +311,7 @@ func (z *Zone) WriteJSON(dir, name string) error {
 		Ref:          name,
 		Manager:      "UNDEFINED",
 		OrderDate:    "YYYY-MM-DD",
-		Status:       "UNDEFINED",
+		Status:       ripconst.RsStatusInProgress,
 		Comment:      "TO BE DEFINED",
 		Nodes:        make(map[string]*ripsites.Node),
 		Troncons:     make(map[string]*ripsites.Troncon),
@@ -360,11 +360,15 @@ func (z *Zone) addSiteTroncon(site *ripsites.Site) {
 }
 
 func (z *Zone) addSitePullings(site *ripsites.Site) {
+	site.Pullings = []*ripsites.Pulling{}
 	state := ripsites.State{
 		Status: ripconst.StateToDo,
 	}
 
 	for _, cable := range z.Cables {
+		if cable.Troncons[0].CableType == "" {
+			continue
+		}
 		sitePulling := &ripsites.Pulling{
 			CableName: cable.Troncons[0].CableType,
 			Chuncks:   nil,

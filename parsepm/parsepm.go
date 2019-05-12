@@ -17,11 +17,11 @@ const (
 	//testXLS         string = `GUE_PM03`
 
 	// DES_PM03
-	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Infos Chantiers\JTestevuide - DESSELING PM3\Infos PM3`
-	//testBPEDir      string = `CCPE_DES_PM3_BPE`
-	//testROPXlsx     string = `CCPE_DES_PM3_ROP\CCPE_DES_PM3_ROP.xlsx`
-	//testCable94Xlsx string = `Quantité_CCAM_DES_PM3\CCAM_DES_PM3_9_4.xlsx`
-	//testXLS         string = `DES_PM3`
+	testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\JTestevuide - DESSELING PM3\Infos PM3`
+	testBPEDir      string = `CCPE_DES_PM3_BPE`
+	testROPXlsx     string = `CCPE_DES_PM3_ROP\CCPE_DES_PM3_ROP.xlsx`
+	testCable94Xlsx string = ``
+	testXLS         string = `DES_PM03`
 
 	// KED_PM03
 	//testDir     string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM03\`
@@ -30,12 +30,12 @@ const (
 	//testCable94Xlsx string = `Quantité_CCAM_KED_PM03\CCAM_KED_PM03_9_4.xlsx`
 	//testXLS     string = `KED_PM03`
 
-	// KED_PM03
-	testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\DMaussand - KEDANGE\Info\CCAM-KED-PM08\CCAM_KED_PM08`
-	testBPEDir      string = `CCAM_KED_PM08_BPE`
-	testROPXlsx     string = `CCAM_KED_PM08_ROP\CCAM_KED_PM08_ROP.xlsx`
-	testCable94Xlsx string = `Quantité_CCAM_KED_PM08\CCAM_KED_PM08_9_4.xlsx`
-	testXLS         string = `KED_PM08`
+	// KED_PM08
+	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\DMaussand - KEDANGE\Info\CCAM-KED-PM08\CCAM_KED_PM08`
+	//testBPEDir      string = `CCAM_KED_PM08_BPE`
+	//testROPXlsx     string = `CCAM_KED_PM08_ROP\CCAM_KED_PM08_ROP.xlsx`
+	//testCable94Xlsx string = `Quantité_CCAM_KED_PM08\CCAM_KED_PM08_9_4.xlsx`
+	//testXLS         string = `KED_PM08`
 
 	// KED_PM09
 	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM09\`
