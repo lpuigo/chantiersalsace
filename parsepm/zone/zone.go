@@ -385,6 +385,10 @@ func (z *Zone) addSitePullings(site *ripsites.Site) {
 				BuildingDist:     tr.FacadeLength,
 				State:            state,
 			}
+			if chunck.LoveDist+chunck.UndergroundDist+chunck.AerialDist+chunck.BuildingDist == 0 {
+				chunck.LoveDist = 20
+				chunck.UndergroundDist = tr.NodeDest.DistFromPM - tr.NodeSource.DistFromPM
+			}
 			sitePulling.Chuncks = append(sitePulling.Chuncks, chunck)
 		}
 		site.Pullings = append(site.Pullings, sitePulling)
@@ -469,5 +473,16 @@ func (z *Zone) addMeasurement(n *node.Node, site *ripsites.Site) {
 
 	for _, cnode := range n.GetChildren() {
 		z.addMeasurement(cnode, site)
+	}
+}
+
+func (z *Zone) EnableCables(enableDestBPECable map[string]string) {
+	for _, cable := range z.Cables {
+		destBPEType := cable.Troncons[len(cable.Troncons)-1].NodeDest.BPEType
+		cableType := enableDestBPECable[destBPEType]
+		if cableType == "" {
+			continue
+		}
+		cable.Troncons[0].CableType = fmt.Sprintf(cableType, cable.Troncons[0].Capa)
 	}
 }

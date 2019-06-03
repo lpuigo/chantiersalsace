@@ -9,19 +9,19 @@ import (
 )
 
 const (
-	// DES_PM03
-	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\MBeck - GUE_PM03\Infos`
-	//testBPEDir      string = `CCAM_GUE_PM3_BPE`
-	//testROPXlsx     string = `CCAM_GUE_PM3_ROP.xlsx`
-	//testCable94Xlsx string = ``
-	//testXLS         string = `GUE_PM03`
+	// GUE_PM03
+	testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\MBeck - GUE_PM03\Infos`
+	testBPEDir      string = `CCAM_GUE_PM3_BPE`
+	testROPXlsx     string = `CCAM_GUE_PM3_ROP.xlsx`
+	testCable94Xlsx string = ``
+	testXLS         string = `GUE_PM03`
 
 	// DES_PM03
-	testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\JTestevuide - DESSELING PM3\Infos PM3`
-	testBPEDir      string = `CCPE_DES_PM3_BPE`
-	testROPXlsx     string = `CCPE_DES_PM3_ROP\CCPE_DES_PM3_ROP.xlsx`
-	testCable94Xlsx string = ``
-	testXLS         string = `DES_PM03`
+	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\JTestevuide - DESSELING PM3\Infos PM3`
+	//testBPEDir      string = `CCPE_DES_PM3_BPE`
+	//testROPXlsx     string = `CCPE_DES_PM3_ROP\CCPE_DES_PM3_ROP.xlsx`
+	//testCable94Xlsx string = ``
+	//testXLS         string = `DES_PM03`
 
 	// KED_PM03
 	//testDir     string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\DMaussand - KEDANGE\Info\CCAM_KED_PM03\`
@@ -44,6 +44,10 @@ const (
 	//testCable94Xlsx string = `Quantité_CCAM_KED_PM09\CCAM_KED_PM09_9_4.xlsx`
 	//testXLS         string = `KED_PM09`
 )
+
+var EnableDestBPECable = map[string]string{
+	"ELINE": "CABLE_%dFO_IMMEUBLE_M6_G657A2",
+}
 
 func main() {
 
@@ -77,6 +81,11 @@ func main() {
 		if err != nil {
 			log.Fatal("could not parse Quantité Cable 9.4 file:", err)
 		}
+	}
+
+	// Force CableType on selected Troncons (used for Immeuble Pulling activity)
+	if len(EnableDestBPECable) > 0 {
+		pm.EnableCables(EnableDestBPECable)
 	}
 
 	err = pm.WriteXLS(testDir, testXLS)
