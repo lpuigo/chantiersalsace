@@ -69,7 +69,13 @@ func (n *Node) SetLocationType() {
 	n.LocationType = "PBO"
 }
 
-func (n *Node) GetWaitingFiber() int {
+func (n *Node) GetToBeMeasuredFiber() int {
+	if n.DistFromPM == 0 {
+		return 0
+	}
+	if n.LocationType == "PM" {
+		return n.Operation["Epissure"]
+	}
 	return n.Operation["Attente"]
 }
 
@@ -294,7 +300,7 @@ func (n *Node) SetOperationFromChildren() {
 }
 
 func (n *Node) SetSplicePTs(splicePT ...string) {
-	if n.GetWaitingFiber() > 0 {
+	if n.GetToBeMeasuredFiber() > 0 {
 		n.SplicePT = splicePT
 	}
 	splicedChildren := n.getSplicedChildren()
@@ -311,7 +317,10 @@ func (n *Node) getSplicedChildren() map[string]bool {
 	res := map[string]bool{}
 	for ope, _ := range n.Operation {
 		if strings.HasPrefix(ope, "Epissure->") {
-			res[n.TronconsOut[strings.TrimPrefix(ope, "Epissure->")].NodeDest.PtName] = true
+			dest := strings.TrimPrefix(ope, "Epissure->")
+			if dest != "" {
+				res[n.TronconsOut[dest].NodeDest.PtName] = true
+			}
 		}
 	}
 	return res
@@ -448,7 +457,7 @@ func (n *Node) WriteMesuresHeader(xs *xlsx.Sheet) {
 }
 
 func (n *Node) WriteMesuresXLS(xs *xlsx.Sheet, nodes Nodes) {
-	wf := n.GetWaitingFiber()
+	wf := n.GetToBeMeasuredFiber()
 	if wf > 0 {
 		n.writeMesuresInfo(xs, wf)
 		for i, ptName := range n.SplicePT {

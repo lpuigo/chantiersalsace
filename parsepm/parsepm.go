@@ -9,12 +9,42 @@ import (
 )
 
 const (
+	testXLS         string = `KOE_PM04`
+	testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\DMaussand - KOE_PM04\Infos`
+	testBPEDir      string = `CCAM_KOE_PM4_BPE`
+	testROPXlsx     string = `CCAM_KOE_PM4_ROP\4.xlsx`
+	testCable94Xlsx string = `CCAM_KOE_PM4_quantités\94.xlsx`
+
+	//testXLS         string = `GUE_PM20`
+	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\MBeck - GUE_PM20\info`
+	//testBPEDir      string = `CCAM_GUE_PM20_BPE`
+	//testROPXlsx     string = `CCAM_GUE_PM20_ROP\CCAM_GUE_PM20_ROP\CCAM_GUE_PM20_ROP.xlsx`
+	//testCable94Xlsx string = ``
+
+	//testXLS         string = `SOL_PM01`
+	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\JTestevuide - SOLGNE\info`
+	//testBPEDir      string = `CCSM_SOL_PM1_BPE`
+	//testROPXlsx     string = `CCSM_SOl_PM1_ROP\CCSM_SOL_PM01_ROP.xlsx`
+	//testCable94Xlsx string = `CCSM_SOL_PM1_Qtté\9,4 PM1.xlsx`
+
+	//testXLS         string = `GUE_TR`
+	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\MBeck - GUENANGE\Info`
+	//testBPEDir      string = `CCAM_GUE_TR_BPE`
+	//testROPXlsx     string = `CCAM_GUE_TR_ROP.xlsx`
+	//testCable94Xlsx string = ``
+
+	//testXLS         string = `AUD_TR`
+	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\MBeck - AUDUN-LE-TICHE\Info`
+	//testBPEDir      string = `BPE`
+	//testROPXlsx     string = `CCPHVA_AUD_TR_ROP.xlsx`
+	//testCable94Xlsx string = ``
+
 	// GUE_PM03
-	testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\MBeck - GUE_PM03\Infos`
-	testBPEDir      string = `CCAM_GUE_PM3_BPE`
-	testROPXlsx     string = `CCAM_GUE_PM3_ROP.xlsx`
-	testCable94Xlsx string = ``
-	testXLS         string = `GUE_PM03`
+	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\MBeck - GUE_PM03\Infos`
+	//testBPEDir      string = `CCAM_GUE_PM3_BPE`
+	//testROPXlsx     string = `CCAM_GUE_PM3_ROP.xlsx`
+	//testCable94Xlsx string = ``
+	//testXLS         string = `GUE_PM03`
 
 	// DES_PM03
 	//testDir         string = `C:\Users\Laurent\Google Drive (laurent.puig.ewin@gmail.com)\Axians\Axians Moselle\Chantiers\JTestevuide - DESSELING PM3\Infos PM3`
@@ -46,11 +76,10 @@ const (
 )
 
 var EnableDestBPECable = map[string]string{
-	"ELINE": "CABLE_%dFO_IMMEUBLE_M6_G657A2",
+	//"ELINE": "CABLE_%dFO_IMMEUBLE_M6_G657A2",
 }
 
 func main() {
-
 	pm := zone.New()
 	err := pm.ParseBPEDir(filepath.Join(testDir, testBPEDir))
 	if err != nil {

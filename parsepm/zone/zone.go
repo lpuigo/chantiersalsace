@@ -456,7 +456,7 @@ func (z *Zone) addSiteMeasurements(site *ripsites.Site) {
 }
 
 func (z *Zone) addMeasurement(n *node.Node, site *ripsites.Site) {
-	wf := n.GetWaitingFiber()
+	wf := n.GetToBeMeasuredFiber()
 	if wf > 0 {
 		state := ripsites.State{
 			Status: ripconst.StateToDo,

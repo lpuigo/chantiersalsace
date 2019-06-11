@@ -47,7 +47,7 @@ func NewRopParser(sh *xlsx.Sheet, zone *Zone) *RopParser {
 }
 
 func (rp *RopParser) debug(msg string) {
-	log.Fatalf("pos %d, %d : %s", rp.pos.row+1, rp.pos.col+1, msg)
+	log.Fatalf("pos %s : %s", xlsx.GetCellIDStringFromCoords(rp.pos.col, rp.pos.row), msg)
 }
 
 func (rp *RopParser) GetChildRopParser() *RopParser {
@@ -80,13 +80,27 @@ func (rp *RopParser) ChildExists() bool {
 	return false
 }
 
-// SetNodeInfo sets node Name and check TronconIn consistency
+// SetNodeInfo sets node Name and check TronconIn consistency (creates It if not already defined)
 func (rp *RopParser) SetNodeInfo(n *node.Node) {
 	n.Name = rp.GetValue(colName)
 	// check cable In consistency
 	cableInName := rp.GetValue(colCableIn)
-	if cableInName != n.TronconIn.Name {
+	if n.TronconIn != nil && cableInName != n.TronconIn.Name {
 		rp.debug(fmt.Sprintf("not matching cable In name '%s' ('%s' expected) for node '%s'", cableInName, n.TronconIn.Name, n.PtName))
+	}
+	if n.TronconIn == nil {
+		trIn := rp.zone.Troncons[cableInName]
+		if trIn == nil {
+			rp.debug(fmt.Sprintf("could not get troncon from cable '%s'", cableInName))
+		}
+		if trIn.NodeDest != nil && trIn.NodeDest.PtName != n.PtName {
+			rp.debug(fmt.Sprintf("troncon '%s' already has a destination node '%s' instead of '%s'", cableInName, trIn.NodeDest.PtName, n.PtName))
+		}
+		if trIn.NodeDest == nil {
+			trIn.NodeDest = n
+			n.TronconIn = trIn
+			trIn.NodeSource.AddChild(n)
+		}
 	}
 }
 
@@ -121,7 +135,24 @@ func (rp *RopParser) Parse() *node.Node {
 	ptName := rp.GetValue(colPtName)
 	currentNode := rp.zone.Nodes[ptName]
 	if currentNode == nil {
-		rp.debug(fmt.Sprintf("could not get node from ptname '%s'", ptName))
+		if !strings.Contains(ptName, "_PM") { // unknown Pt is not a PM ... exit with debug
+			rp.debug(fmt.Sprintf("could not get node from ptname '%s'", ptName))
+		}
+		// unknown Pt is a PM, let's create it
+		currentNode = node.NewPMNode(nil)
+		currentNode.PtName = ptName
+		currentNode.Name = rp.GetValue(colName)
+		rp.zone.Nodes.Add(currentNode)
+
+		// check if cableIn is already defined (false when PM directly behind NRO => creates it)
+
+		cableInName := rp.GetValue(colCableIn)
+		trIn := rp.zone.Troncons[cableInName]
+		if trIn == nil {
+			newTr := node.NewTroncon(cableInName)
+			newTr.NodeSource = rp.zone.Sro
+			rp.zone.Troncons.Add(newTr)
+		}
 	}
 	distString := rp.GetValue(colDistFromPM)
 	dist, err := strconv.ParseInt(distString, 10, 64)
@@ -140,7 +171,8 @@ func (rp *RopParser) Parse() *node.Node {
 			}
 			rp.pos.row = crp.pos.row
 		} else {
-			if rp.GetValue(colOpe) == "ATTENTE" {
+			switch rp.GetValue(colOpe) {
+			case "ATTENTE":
 				drawer := rp.GetPosValue(rp.pos.row, acolDrawer)
 				parts := strings.Split(drawer, "_")
 				drawerSuffix := strings.Join(parts[len(parts)-2:], "_")
@@ -150,6 +182,19 @@ func (rp *RopParser) Parse() *node.Node {
 					rp.GetPosInt(rp.pos.row, acolDrawerCol),
 				)
 				currentNode.AddDrawerInfo(drawerInfo)
+				if currentNode.LocationType == "PM" {
+					currentNode.AddOperation(rp.GetValue(colCableIn), "ATTENTE", "", "")
+					if currentNode.TronconIn.NodeSource.LocationType == "PM" {
+						currentNode.TronconIn.Capa++
+					}
+				}
+			case "EPISSURE":
+				if currentNode.LocationType == "PM" {
+					currentNode.AddOperation(rp.GetValue(colCableIn), "EPISSURE", "", "")
+					if currentNode.TronconIn.NodeSource.LocationType == "PM" {
+						currentNode.TronconIn.Capa++
+					}
+				}
 			}
 			rp.pos.row++
 		}
