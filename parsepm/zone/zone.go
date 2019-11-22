@@ -361,9 +361,7 @@ func (z *Zone) addSiteTroncon(site *ripsites.Site) {
 
 func (z *Zone) addSitePullings(site *ripsites.Site) {
 	site.Pullings = []*ripsites.Pulling{}
-	state := ripsites.State{
-		Status: ripconst.StateToDo,
-	}
+	state := ripsites.MakeState(ripconst.StateToDo)
 
 	for _, cable := range z.Cables {
 		if cable.Troncons[0].CableType == "" {
@@ -406,9 +404,8 @@ func (z *Zone) addSiteJunctions(site *ripsites.Site) {
 }
 
 func addJunction(n *node.Node, site *ripsites.Site) {
-	state := ripsites.State{
-		Status: ripconst.StateToDo,
-	}
+	state := ripsites.MakeState(ripconst.StateToDo)
+
 	junction := &ripsites.Junction{
 		NodeName:   n.PtName,
 		Operations: nil,
@@ -458,9 +455,8 @@ func (z *Zone) addSiteMeasurements(site *ripsites.Site) {
 func (z *Zone) addMeasurement(n *node.Node, site *ripsites.Site) {
 	wf := n.GetToBeMeasuredFiber()
 	if wf > 0 {
-		state := ripsites.State{
-			Status: ripconst.StateToDo,
-		}
+		state := ripsites.MakeState(ripconst.StateToDo)
+
 		measurement := &ripsites.Measurement{
 			DestNodeName: n.PtName,
 			NbFiber:      wf,
