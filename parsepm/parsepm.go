@@ -9,24 +9,30 @@ import (
 )
 
 const (
-	testXLS         string = `BOUL_PM04`
-	testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCPB_BOU_PM04`
-	testBPEDir      string = `CCPB_BOU_PM04_BPE`
-	testROPXlsx     string = `CCPB_BOU_PM04_ROP\CCPB_BOU_PM4_ROP.xlsx`
+	testClient  string = "Axians Moselle"
+	testManager string = "David MAUSSAND"
+
+	testXLS         string = `VOL_PM09`
+	testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCCE_VOL_PM09`
+	testBPEDir      string = `CCCE_VOL_PM09_BPE`
+	testROPXlsx     string = `CCCE_VOL_PM09_ROP\CCCE_VOL_PM09_ROP.xlsx`
+	testSiteId      int    = 28
 	testCable94Xlsx string = ``
 	//
-	//testXLS         string = `BOUL_PM03`
-	//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCPB_BOU_PM03`
-	//testBPEDir      string = `CCPB_BOU_PM03_BPE`
-	//testROPXlsx     string = `CCPB_BOU_PM03_ROP\CCPB_BOU_PM03_ROP.xlsx`
+	//testXLS         string = `VOL_PM07`
+	//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCCE_VOL_PM07`
+	//testBPEDir      string = `CCCE_VOL_PM07_BPE`
+	//testROPXlsx     string = `CCCE_VOL_PM07_ROP\CCCE_VOL_PM07_ROP.xlsx`
+	//testSiteId int = 27
 	//testCable94Xlsx string = ``
-	//
-	//testXLS         string = `BOUL_PM01`
-	//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCPB_BOU_PM01`
-	//testBPEDir      string = `CCPB_BOU_PM1_BPE`
-	//testROPXlsx     string = `CCPB_BOU_PM1_ROP\CCPB_BOU_PM1_ROP.xlsx`
+	////
+	//testXLS         string = `VOL_PM02`
+	//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCCE_VOL_PM02`
+	//testBPEDir      string = `CCCE_VOL_PM02_BPE`
+	//testROPXlsx     string = `CCCE_VOL_PM02_ROP\CCCE_VOL_PM02_ROP.xlsx`
+	//testSiteId int = 26
 	//testCable94Xlsx string = ``
-	//
+	////
 )
 
 var EnableDestBPECable = map[string]string{
@@ -77,7 +83,7 @@ func main() {
 		log.Fatal("could not write XLSx :", err)
 	}
 
-	err = pm.WriteJSON(testDir, testXLS)
+	err = pm.WriteJSON(testDir, testXLS, testClient, testManager, testSiteId)
 	if err != nil {
 		log.Fatal("could not write JSON file :", err)
 	}
@@ -92,6 +98,48 @@ func exists(file string) bool {
 // Archive
 //
 
+//testXLS         string = `VOL_PM03`
+//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCCE_VOL_PM03`
+//testBPEDir      string = `CCCE_VOL_PM03_BPE`
+//testROPXlsx     string = `CCCE_VOL_PM03_ROP\CCCE_VOL_PM03_ROP.xlsx`
+//testCable94Xlsx string = ``
+////
+//testXLS         string = `MET_PM04`
+//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCPP_MET_PM04`
+//testBPEDir      string = `CCPP_MET_PM04_BPE`
+//testROPXlsx     string = `CCPP_MET_PM04_ROP.xlsx`
+//testCable94Xlsx string = ``
+//
+//testXLS         string = `LON_PM05`
+//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCDUF_LON_PM05`
+//testBPEDir      string = `CCDUF_LON_PM05_BPE`
+//testROPXlsx     string = `CCDUF_LON_PM05_ROP\CCDUF_LON_PM05_ROP.xlsx`
+//testCable94Xlsx string = ``
+//
+//testXLS         string = `GUE_PM17`
+//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCAM_GUE_PM17`
+//testBPEDir      string = `CCAM_GUE _PM17_BPE`
+//testROPXlsx     string = `CCAM_GUE _PM17_ROP\CCAM_GUE_PM17_ROP.xlsx`
+//testCable94Xlsx string = ``
+//
+//testXLS         string = `BOUL_PM04`
+//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCPB_BOU_PM04`
+//testBPEDir      string = `CCPB_BOU_PM04_BPE`
+//testROPXlsx     string = `CCPB_BOU_PM04_ROP\CCPB_BOU_PM4_ROP.xlsx`
+//testCable94Xlsx string = ``
+//
+//testXLS         string = `BOUL_PM03`
+//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCPB_BOU_PM03`
+//testBPEDir      string = `CCPB_BOU_PM03_BPE`
+//testROPXlsx     string = `CCPB_BOU_PM03_ROP\CCPB_BOU_PM03_ROP.xlsx`
+//testCable94Xlsx string = ``
+//
+//testXLS         string = `BOUL_PM01`
+//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCPB_BOU_PM01`
+//testBPEDir      string = `CCPB_BOU_PM1_BPE`
+//testROPXlsx     string = `CCPB_BOU_PM1_ROP\CCPB_BOU_PM1_ROP.xlsx`
+//testCable94Xlsx string = ``
+//
 //testXLS         string = `BOUL_PM05`
 //testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCPB_BOU_PM05`
 //testBPEDir      string = `CCPB_BOU_PM05_BPE`

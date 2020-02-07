@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/lpuig/ewin/chantiersalsace/parsepm/node"
+	"github.com/lpuig/ewin/doe/website/backend/model/date"
 	"github.com/lpuig/ewin/doe/website/backend/model/ripsites"
 	"github.com/lpuig/ewin/doe/website/frontend/model/ripsite/ripconst"
 	"github.com/tealeg/xlsx"
@@ -299,20 +300,20 @@ func (z *Zone) ParseQuantiteCableXLS(file string) error {
 	return nil
 }
 
-func (z *Zone) WriteJSON(dir, name string) error {
+func (z *Zone) WriteJSON(dir, name, client, manager string, siteId int) error {
 	if len(z.Nodes) == 0 {
 		return fmt.Errorf("zone is empty, nothing to write to Json")
 	}
-	file := filepath.Join(dir, name+".json")
+	file := filepath.Join(dir, fmt.Sprintf("%06d.json", siteId))
 
 	site := ripsites.Site{
-		Id:           0,
-		Client:       "UNDEFINED",
+		Id:           siteId,
+		Client:       client,
 		Ref:          name,
-		Manager:      "UNDEFINED",
-		OrderDate:    "YYYY-MM-DD",
+		Manager:      manager,
+		OrderDate:    date.Today().String(),
 		Status:       ripconst.RsStatusInProgress,
-		Comment:      "TO BE DEFINED",
+		Comment:      "",
 		Nodes:        make(map[string]*ripsites.Node),
 		Troncons:     make(map[string]*ripsites.Troncon),
 		Pullings:     nil,
