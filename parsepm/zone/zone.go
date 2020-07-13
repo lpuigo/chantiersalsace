@@ -406,7 +406,10 @@ func (z *Zone) addSiteJunctions(site *ripsites.Site) {
 
 func addJunction(n *node.Node, site *ripsites.Site) {
 	state := ripsites.MakeState(ripconst.StateToDo)
-
+	if n.BPEType == "ELINE" {
+		state.Status = ripconst.StateCanceled
+		state.Comment = "Fait par une autre entreprise"
+	}
 	junction := &ripsites.Junction{
 		NodeName:   n.PtName,
 		Operations: nil,
@@ -483,3 +486,21 @@ func (z *Zone) EnableCables(enableDestBPECable map[string]string) {
 		cable.Troncons[0].CableType = fmt.Sprintf(cableType, cable.Troncons[0].Capa)
 	}
 }
+
+func (z *Zone) CheckConsistency() {
+	for _, node := range z.Nodes {
+		if node.BPEType == "" {
+			node.BPEType = "ELINE"
+		}
+	}
+}
+
+func (z *Zone) GetNodeByTronconIn(troncon string) *node.Node {
+	for _, node := range z.Nodes {
+		if node.TronconIn.Name == troncon {
+			return node
+		}
+	}
+	return nil
+}
+

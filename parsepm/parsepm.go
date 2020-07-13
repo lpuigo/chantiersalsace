@@ -10,15 +10,23 @@ import (
 
 const (
 	testClient  string = "Axians Moselle"
+	//testManager string = "Matthieu BECK"
 	testManager string = "David MAUSSAND"
 
-	testXLS         string = `VOL_PM09`
-	testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCCE_VOL_PM09`
-	testBPEDir      string = `CCCE_VOL_PM09_BPE`
-	testROPXlsx     string = `CCCE_VOL_PM09_ROP\CCCE_VOL_PM09_ROP.xlsx`
-	testSiteId      int    = 28
+	testXLS         string = `TRE_PM08`
+	testDir         string = `C:\Users\Laurent\Desktop\TEMPORAIRE\CCPHVA_TRE_DIST\CCPHVA_TRE_PM08`
+	testBPEDir      string = `CCPHVA_TRE_PM08_BPE`
+	testROPXlsx     string = `CCPHVA_TRE_PM08_ROP\CCPHVA_TRE_PM08_ROP.xlsx`
+	testSiteId      int    = 33+8
 	testCable94Xlsx string = ``
 	//
+	//testXLS         string = `VOL_PM09`
+	//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCCE_VOL_PM09`
+	//testBPEDir      string = `CCCE_VOL_PM09_BPE`
+	//testROPXlsx     string = `CCCE_VOL_PM09_ROP\CCCE_VOL_PM09_ROP.xlsx`
+	//testSiteId      int    = 28
+	//testCable94Xlsx string = ``
+	////
 	//testXLS         string = `VOL_PM07`
 	//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCCE_VOL_PM07`
 	//testBPEDir      string = `CCCE_VOL_PM07_BPE`
@@ -49,7 +57,7 @@ func main() {
 	ropFile := filepath.Join(testDir, testROPXlsx)
 	if exists(ropFile) {
 		// If ROP File exist, parse it to create BPE Tree
-		err = pm.ParseROPXLS(ropFile)
+		err = pm.ParseROPXLS(ropFile)  // rp.zone.Nodes["PT 204558"]
 		if err != nil {
 			log.Fatal("could not parse ROP file:", err)
 		}
@@ -77,6 +85,8 @@ func main() {
 	if len(EnableDestBPECable) > 0 {
 		pm.EnableCables(EnableDestBPECable)
 	}
+
+	pm.CheckConsistency()
 
 	err = pm.WriteXLS(testDir, testXLS)
 	if err != nil {

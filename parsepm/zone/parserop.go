@@ -86,15 +86,15 @@ func (rp *RopParser) SetNodeInfo(n *node.Node) {
 	// check cable In consistency
 	cableInName := rp.GetValue(colCableIn)
 	if n.TronconIn != nil && cableInName != n.TronconIn.Name {
-		rp.debug(fmt.Sprintf("not matching cable In name '%s' ('%s' expected) for node '%s'", cableInName, n.TronconIn.Name, n.PtName))
+		rp.debug(fmt.Sprintf("SetNodeInfo: not matching cable In name '%s' ('%s' expected) for node '%s'", cableInName, n.TronconIn.Name, n.PtName))
 	}
 	if n.TronconIn == nil {
 		trIn := rp.zone.Troncons[cableInName]
 		if trIn == nil {
-			rp.debug(fmt.Sprintf("could not get troncon from cable '%s'", cableInName))
+			rp.debug(fmt.Sprintf("SetNodeInfo: could not get troncon from cable '%s'", cableInName))
 		}
 		if trIn.NodeDest != nil && trIn.NodeDest.PtName != n.PtName {
-			rp.debug(fmt.Sprintf("troncon '%s' already has a destination node '%s' instead of '%s'", cableInName, trIn.NodeDest.PtName, n.PtName))
+			rp.debug(fmt.Sprintf("SetNodeInfo: troncon '%s' already has a destination node '%s' instead of '%s'", cableInName, trIn.NodeDest.PtName, n.PtName))
 		}
 		if trIn.NodeDest == nil {
 			trIn.NodeDest = n
@@ -134,9 +134,12 @@ func (rp *RopParser) ParseRop() {
 func (rp *RopParser) Parse() *node.Node {
 	ptName := rp.GetValue(colPtName)
 	currentNode := rp.zone.Nodes[ptName]
+	//if currentNode == nil {
+	//	currentNode = rp.zone.GetNodeByTronconIn(rp.GetValue(colCableIn))
+	//}
 	if currentNode == nil {
 		if !strings.Contains(ptName, "_PM") { // unknown Pt is not a PM ... exit with debug
-			rp.debug(fmt.Sprintf("could not get node from ptname '%s'", ptName))
+			rp.debug(fmt.Sprintf("Parse: could not get node from ptname '%s'", ptName))
 		}
 		// unknown Pt is a PM, let's create it
 		currentNode = node.NewPMNode(nil)
@@ -157,7 +160,7 @@ func (rp *RopParser) Parse() *node.Node {
 	distString := rp.GetValue(colDistFromPM)
 	dist, err := strconv.ParseInt(distString, 10, 64)
 	if err != nil {
-		rp.debug(fmt.Sprintf("could not get distance from '%s'", distString))
+		rp.debug(fmt.Sprintf("Parse: could not get distance from '%s'", distString))
 	}
 	currentNode.DistFromPM = int(dist)
 	rp.SetNodeInfo(currentNode)
