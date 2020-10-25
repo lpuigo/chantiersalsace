@@ -13,11 +13,11 @@ const (
 	//testManager string = "Matthieu BECK"
 	testManager string = "David MAUSSAND"
 
-	testXLS         string = `TRE_PM08`
-	testDir         string = `C:\Users\Laurent\Desktop\TEMPORAIRE\CCPHVA_TRE_DIST\CCPHVA_TRE_PM08`
-	testBPEDir      string = `CCPHVA_TRE_PM08_BPE`
-	testROPXlsx     string = `CCPHVA_TRE_PM08_ROP\CCPHVA_TRE_PM08_ROP.xlsx`
-	testSiteId      int    = 33+8
+	testXLS         string = `SIE_PM12`
+	testDir         string = `C:\Users\Laurent\Desktop\TEMPORAIRE\SIE_PM\CC3F_SIE_PM12`
+	testBPEDir      string = `CC3F_SIE_PM12_BPE`
+	testROPXlsx     string = `CC3F_SIE_PM12_ROP\CC3F_SIE_PM12_ROP.xlsx`
+	testSiteId      int    = 50
 	testCable94Xlsx string = ``
 	//
 	//testXLS         string = `VOL_PM09`
@@ -49,6 +49,15 @@ var EnableDestBPECable = map[string]string{
 
 func main() {
 	pm := zone.New()
+	// configure activity
+	pm.DoPulling = false
+
+	pm.DoJunctions = true
+	pm.DoEline = true
+	pm.DoOtherThanEline = false
+
+	pm.DoMeasurement = false
+
 	err := pm.ParseBPEDir(filepath.Join(testDir, testBPEDir))
 	if err != nil {
 		log.Fatal("could not parse BPE Directory:", err)

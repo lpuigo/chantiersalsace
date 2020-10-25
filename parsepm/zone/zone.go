@@ -14,11 +14,16 @@ import (
 )
 
 type Zone struct {
-	Nodes     node.Nodes
-	Troncons  node.Troncons
-	Cables    node.Cables
-	Sro       *node.Node
-	NodeRoots []*node.Node
+	Nodes            node.Nodes
+	Troncons         node.Troncons
+	Cables           node.Cables
+	Sro              *node.Node
+	NodeRoots        []*node.Node
+	DoPulling        bool
+	DoJunctions      bool
+	DoEline          bool
+	DoOtherThanEline bool
+	DoMeasurement    bool
 }
 
 func New() *Zone {
@@ -362,6 +367,10 @@ func (z *Zone) addSiteTroncon(site *ripsites.Site) {
 
 func (z *Zone) addSitePullings(site *ripsites.Site) {
 	site.Pullings = []*ripsites.Pulling{}
+	if !z.DoPulling {
+		return
+	}
+
 	state := ripsites.MakeState(ripconst.StateToDo)
 
 	for _, cable := range z.Cables {
@@ -395,20 +404,28 @@ func (z *Zone) addSitePullings(site *ripsites.Site) {
 }
 
 func (z *Zone) addSiteJunctions(site *ripsites.Site) {
+	site.Junctions = []*ripsites.Junction{}
+	if !z.DoJunctions {
+		return
+	}
 	if len(z.Sro.Children) > 0 {
-		addJunction(z.Sro, site)
+		z.addJunction(z.Sro, site)
 	} else {
 		for _, rootnode := range z.NodeRoots {
-			addJunction(rootnode, site)
+			z.addJunction(rootnode, site)
 		}
 	}
 }
 
-func addJunction(n *node.Node, site *ripsites.Site) {
+func (z *Zone) addJunction(n *node.Node, site *ripsites.Site) {
 	state := ripsites.MakeState(ripconst.StateToDo)
-	if n.BPEType == "ELINE" {
+	if !z.DoEline && n.BPEType == "ELINE" {
 		state.Status = ripconst.StateCanceled
-		state.Comment = "Fait par une autre entreprise"
+		state.Comment = "A ne pas faire"
+	}
+	if !z.DoOtherThanEline && n.BPEType != "ELINE" {
+		state.Status = ripconst.StateCanceled
+		state.Comment = "A ne pas faire"
 	}
 	junction := &ripsites.Junction{
 		NodeName:   n.PtName,
@@ -448,11 +465,15 @@ func addJunction(n *node.Node, site *ripsites.Site) {
 	site.Junctions = append(site.Junctions, junction)
 
 	for _, cnode := range n.GetChildren() {
-		addJunction(cnode, site)
+		z.addJunction(cnode, site)
 	}
 }
 
 func (z *Zone) addSiteMeasurements(site *ripsites.Site) {
+	site.Measurements = []*ripsites.Measurement{}
+	if !z.DoMeasurement {
+		return
+	}
 	z.addMeasurement(z.Sro, site)
 }
 
@@ -503,4 +524,3 @@ func (z *Zone) GetNodeByTronconIn(troncon string) *node.Node {
 	}
 	return nil
 }
-
