@@ -177,8 +177,11 @@ func (rp *RopParser) Parse() *node.Node {
 			switch rp.GetValue(colOpe) {
 			case "ATTENTE":
 				drawer := rp.GetPosValue(rp.pos.row, acolDrawer)
+				drawerSuffix := drawer
 				parts := strings.Split(drawer, "_")
-				drawerSuffix := strings.Join(parts[len(parts)-2:], "_")
+				if len(parts) >= 2 {
+					drawerSuffix = strings.Join(parts[len(parts)-2:], "_")
+				}
 				drawerInfo := fmt.Sprintf("%s/%s/%02d",
 					drawerSuffix,
 					rp.GetPosValue(rp.pos.row, acolDrawerLine),

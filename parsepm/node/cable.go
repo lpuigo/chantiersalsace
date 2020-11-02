@@ -9,8 +9,7 @@ type Cable struct {
 }
 
 func NewCable(tr *Troncon) *Cable {
-	nc := &Cable{}
-	//nc.AddTroncon(tr, 20)
+	nc := &Cable{Capa: tr.Capa}
 	return nc
 }
 

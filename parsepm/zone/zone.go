@@ -24,14 +24,16 @@ type Zone struct {
 	DoEline          bool
 	DoOtherThanEline bool
 	DoMeasurement    bool
+	BlobPattern      string
 }
 
 func New() *Zone {
 	z := &Zone{
-		Nodes:     node.NewNodes(),
-		Troncons:  node.NewTroncons(),
-		NodeRoots: []*node.Node{},
-		Sro:       node.NewNode(),
+		Nodes:       node.NewNodes(),
+		Troncons:    node.NewTroncons(),
+		NodeRoots:   []*node.Node{},
+		Sro:         node.NewNode(),
+		BlobPattern: blobpattern_EasyFibre,
 	}
 	z.Sro.Name = "SRO"
 	z.Sro.PtName = "SRO"
@@ -41,7 +43,8 @@ func New() *Zone {
 }
 
 const (
-	blobpattern string = `*PT*.xlsx`
+	blobpattern_EasyFibre string = `*PT*.xlsx`
+	blobpattern_Sogetrel  string = `*/_*.xlsx`
 )
 
 func (z *Zone) ParseBPEDir(dir string) error {
@@ -52,7 +55,7 @@ func (z *Zone) ParseBPEDir(dir string) error {
 	if !fs.IsDir() {
 		return fmt.Errorf("'%s' is not a directory", dir)
 	}
-	parseBlobPattern := filepath.Join(dir, blobpattern)
+	parseBlobPattern := filepath.Join(dir, z.BlobPattern)
 	files, err := filepath.Glob(parseBlobPattern)
 	if err != nil {
 		return err
@@ -305,13 +308,95 @@ func (z *Zone) ParseQuantiteCableXLS(file string) error {
 	return nil
 }
 
+const (
+	rowQC2Start       int = 1
+	colQC2Orig        int = 0
+	colQC2Dest        int = 1
+	colQC2PullingType int = 2
+	colQC2Length      int = 3
+	colQC2Capa        int = 4
+)
+
+func (z *Zone) ParseQuantiteCableOptiqueC2Xlsx(file string) error {
+	baseFile := filepath.Base(file)
+	xls, err := xlsx.OpenFile(file)
+	if err != nil {
+		return err
+	}
+	sheet := xls.Sheets[0]
+	if sheet.Cell(rowQC2Start-1, colQC2Orig).Value != "ORIGINE" {
+		return fmt.Errorf("could not find 'ORIGINE' label on line %d, col %d", rowQC2Start, colQC2Orig+1)
+	}
+
+	type c2Data struct {
+		orig        string
+		dest        string
+		pullingType string
+		lenght      float64
+		capa        int
+	}
+
+	c2DataDict := make(map[string]c2Data)
+
+	for row := rowQC2Start; row < sheet.MaxRow; row++ {
+		length, err := sheet.Cell(row, colQC2Length).Float()
+		if err != nil {
+			fmt.Printf("\t%s: could not read length '%s' on line %d, col %d (use default 20m instead)\n", baseFile, sheet.Cell(row, colQC2Length).Value, row+1, colQC2Length+1)
+			length = 20
+		}
+		capa, err := sheet.Cell(row, colQC2Capa).Int()
+		if err != nil {
+			fmt.Printf("\t%s: could not read capa '%s' on line %d, col %d (use default 0 instead)\n", baseFile, sheet.Cell(row, colQC2Capa).Value, row+1, colQC2Length+1)
+			capa = 0
+		}
+		c := c2Data{
+			orig:        sheet.Cell(row, colQC2Orig).Value,
+			dest:        sheet.Cell(row, colQC2Dest).Value,
+			pullingType: sheet.Cell(row, colQC2PullingType).Value,
+			lenght:      length,
+			capa:        capa,
+		}
+		c2DataDict[c.dest] = c
+	}
+
+	for _, tr := range z.Troncons {
+		if tr.NodeDest == nil {
+			fmt.Printf("\t%s has no destination node. Skipping\n", tr.Name)
+			continue
+		}
+		c2, found := c2DataDict[tr.NodeDest.PtName]
+		if !found {
+			fmt.Printf("\t%s has unknown destination node %s. Skipping\n", tr.Name, tr.NodeDest.PtName)
+			continue
+		}
+		tr.LoveLength = 0
+		if tr.Capa != c2.capa {
+			fmt.Printf("\t%s has unexpected capacity %d vs %d\n", tr.Name, c2.capa, tr.Capa)
+		}
+		tr.CableType = fmt.Sprintf("CABLE_%dFO", tr.Capa)
+		tirageType := c2.pullingType
+		pullingLength := int(c2.lenght)
+		switch {
+		case strings.Contains(tirageType, "AERIEN"):
+			tr.AerialLength += pullingLength
+		case strings.Contains(tirageType, "FACADE"):
+			tr.FacadeLength += pullingLength
+		case strings.Contains(tirageType, "CONDUITE"):
+			tr.UndergroundLength += pullingLength
+		default:
+			fmt.Printf("\t%s has unknown pulling type '%s'\n", tr.Name, tirageType)
+		}
+	}
+	return nil
+}
+
 func (z *Zone) WriteJSON(dir, name, client, manager string, siteId int) error {
 	if len(z.Nodes) == 0 {
 		return fmt.Errorf("zone is empty, nothing to write to Json")
 	}
 	file := filepath.Join(dir, fmt.Sprintf("%06d.json", siteId))
 
-	site := ripsites.Site{
+	site := &ripsites.Site{
 		Id:           siteId,
 		Client:       client,
 		Ref:          name,
@@ -326,18 +411,19 @@ func (z *Zone) WriteJSON(dir, name, client, manager string, siteId int) error {
 		Measurements: nil,
 	}
 
-	z.addSiteNodes(&site)
-	z.addSiteTroncon(&site)
+	z.addSiteNodes(site)
+	z.addSiteTroncon(site)
 
-	z.addSitePullings(&site)
-	z.addSiteJunctions(&site)
-	z.addSiteMeasurements(&site)
+	z.addSitePullings(site)
+	z.addSiteJunctions(site)
+	z.addSiteMeasurements(site)
 
 	f, err := os.Create(file)
 	if err != nil {
 		return fmt.Errorf("could not create file:%s\n", err.Error())
 	}
-	return json.NewEncoder(f).Encode(&site)
+	defer f.Close()
+	return json.NewEncoder(f).Encode(site)
 }
 
 func (z *Zone) addSiteNodes(site *ripsites.Site) {

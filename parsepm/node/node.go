@@ -226,6 +226,9 @@ func (n *Node) ParseBPEXLS(file string, troncons Troncons) error {
 			if len(infos) < 2 {
 				return fmt.Errorf("could not parse Troncon Info line %d : '%s'", row+1, tronconInfo)
 			}
+			if len(infos) > 2 {
+				infos = []string{infos[0], strings.Join(infos[1:], "-")}
+			}
 			nt := troncons.Get(infos[1])
 			capa := strings.Split(infos[0], " ")[0]
 			nbFo, err := strconv.ParseInt(capa, 10, 64)

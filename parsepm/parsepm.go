@@ -9,17 +9,27 @@ import (
 )
 
 const (
-	testClient  string = "Axians Moselle"
-	//testManager string = "Matthieu BECK"
-	testManager string = "David MAUSSAND"
+	//testClient string = "Axians Moselle"
+	////testManager string = "Matthieu BECK"
+	//testManager string = "David MAUSSAND"
 
-	testXLS         string = `SIE_PM12`
-	testDir         string = `C:\Users\Laurent\Desktop\TEMPORAIRE\SIE_PM\CC3F_SIE_PM12`
-	testBPEDir      string = `CC3F_SIE_PM12_BPE`
-	testROPXlsx     string = `CC3F_SIE_PM12_ROP\CC3F_SIE_PM12_ROP.xlsx`
-	testSiteId      int    = 50
-	testCable94Xlsx string = ``
+	//testXLS         string = `SIE_PM12`
+	//testDir         string = `C:\Users\Laurent\Desktop\TEMPORAIRE\SIE_PM\CC3F_SIE_PM12\`
+	//testBPEDir      string = `CC3F_SIE_PM12_BPE`
+	//testROPXlsx     string = `CC3F_SIE_PM12_ROP\CC3F_SIE_PM12_ROP.xlsx`
+	//testCable94Xlsx string = ``
 	//
+	testClient             string = "Sogetrel"
+	testManager            string = "CHAUFFERT Nicolas"
+	testXLS                string = `SRO-10-50-251`
+	testDir                string = `C:\Users\Laurent\Desktop\TEMPORAIRE\Sogetrel\Chantier Fibre Aube\`
+	testBPEDir             string = `4.PLANS DE SOUDURE`
+	testROPXlsx            string = `5.ROUTE OPTIQUE\20200820-SRO-10-045-251-ROP-EXCEL.xlsx`
+	testCable94Xlsx        string = ``
+	testCableOptiqueC2Xlsx string = `10_045_251_CABLE_OPTIQUE_C2.xlsx`
+
+	testSiteId int = 51
+
 	//testXLS         string = `VOL_PM09`
 	//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCCE_VOL_PM09`
 	//testBPEDir      string = `CCCE_VOL_PM09_BPE`
@@ -50,13 +60,14 @@ var EnableDestBPECable = map[string]string{
 func main() {
 	pm := zone.New()
 	// configure activity
-	pm.DoPulling = false
+	pm.DoPulling = true
 
 	pm.DoJunctions = true
 	pm.DoEline = true
-	pm.DoOtherThanEline = false
+	pm.DoOtherThanEline = true
 
-	pm.DoMeasurement = false
+	pm.DoMeasurement = true
+	pm.BlobPattern = `*/_*.xlsx` // for Sogetrel Worksite
 
 	err := pm.ParseBPEDir(filepath.Join(testDir, testBPEDir))
 	if err != nil {
@@ -66,7 +77,7 @@ func main() {
 	ropFile := filepath.Join(testDir, testROPXlsx)
 	if exists(ropFile) {
 		// If ROP File exist, parse it to create BPE Tree
-		err = pm.ParseROPXLS(ropFile)  // rp.zone.Nodes["PT 204558"]
+		err = pm.ParseROPXLS(ropFile) // rp.zone.Nodes["PT 204558"]
 		if err != nil {
 			log.Fatal("could not parse ROP file:", err)
 		}
@@ -90,12 +101,23 @@ func main() {
 		}
 	}
 
+	if testCableOptiqueC2Xlsx != "" {
+		cableC2File := filepath.Join(testDir, testCableOptiqueC2Xlsx)
+		if !exists(cableC2File) {
+			log.Fatal("cable file '%s' does not exist\n", cableC2File)
+		}
+		err = pm.ParseQuantiteCableOptiqueC2Xlsx(cableC2File)
+		if err != nil {
+			log.Fatal("could not parse Quantité Cable Optique C2 file:", err)
+		}
+	}
+
+	pm.CheckConsistency()
+
 	// Force CableType on selected Troncons (used for Immeuble Pulling activity)
 	if len(EnableDestBPECable) > 0 {
 		pm.EnableCables(EnableDestBPECable)
 	}
-
-	pm.CheckConsistency()
 
 	err = pm.WriteXLS(testDir, testXLS)
 	if err != nil {
