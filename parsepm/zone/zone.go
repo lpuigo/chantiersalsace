@@ -44,7 +44,7 @@ func New() *Zone {
 
 const (
 	blobpattern_EasyFibre string = `*PT*.xlsx`
-	blobpattern_Sogetrel  string = `*/_*.xlsx`
+	Blobpattern_Sogetrel  string = `*/_*.xlsx`
 )
 
 func (z *Zone) ParseBPEDir(dir string) error {

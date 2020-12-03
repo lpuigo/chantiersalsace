@@ -85,8 +85,12 @@ func (rp *RopParser) SetNodeInfo(n *node.Node) {
 	n.Name = rp.GetValue(colName)
 	// check cable In consistency
 	cableInName := rp.GetValue(colCableIn)
+
 	if n.TronconIn != nil && cableInName != n.TronconIn.Name {
-		rp.debug(fmt.Sprintf("SetNodeInfo: not matching cable In name '%s' ('%s' expected) for node '%s'", cableInName, n.TronconIn.Name, n.PtName))
+		if strings.ReplaceAll(cableInName, " ", "") != strings.ReplaceAll(n.TronconIn.Name, " ", "") {
+			rp.debug(fmt.Sprintf("SetNodeInfo: not matching cable In name '%s' ('%s' expected) for node '%s'", cableInName, n.TronconIn.Name, n.PtName))
+		}
+		cableInName = n.TronconIn.Name
 	}
 	if n.TronconIn == nil {
 		trIn := rp.zone.Troncons[cableInName]
@@ -134,9 +138,6 @@ func (rp *RopParser) ParseRop() {
 func (rp *RopParser) Parse() *node.Node {
 	ptName := rp.GetValue(colPtName)
 	currentNode := rp.zone.Nodes[ptName]
-	//if currentNode == nil {
-	//	currentNode = rp.zone.GetNodeByTronconIn(rp.GetValue(colCableIn))
-	//}
 	if currentNode == nil {
 		if !strings.Contains(ptName, "_PM") { // unknown Pt is not a PM ... exit with debug
 			rp.debug(fmt.Sprintf("Parse: could not get node from ptname '%s'", ptName))

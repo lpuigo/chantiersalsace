@@ -9,48 +9,31 @@ import (
 )
 
 const (
-	//testClient string = "Axians Moselle"
-	////testManager string = "Matthieu BECK"
-	//testManager string = "David MAUSSAND"
+	// Sogetrel Fibre ==================================================================================================
+	//testClient             string = "Sogetrel Fibre"
+	//testManager            string = "CHAUFFERT Nicolas"
 
-	//testXLS         string = `SIE_PM12`
-	//testDir         string = `C:\Users\Laurent\Desktop\TEMPORAIRE\SIE_PM\CC3F_SIE_PM12\`
-	//testBPEDir      string = `CC3F_SIE_PM12_BPE`
-	//testROPXlsx     string = `CC3F_SIE_PM12_ROP\CC3F_SIE_PM12_ROP.xlsx`
-	//testCable94Xlsx string = ``
-	//
-	testClient             string = "Sogetrel"
-	testManager            string = "CHAUFFERT Nicolas"
-	testXLS                string = `SRO-10-50-251`
-	testDir                string = `C:\Users\Laurent\Desktop\TEMPORAIRE\Sogetrel\Chantier Fibre Aube\`
-	testBPEDir             string = `4.PLANS DE SOUDURE`
-	testROPXlsx            string = `5.ROUTE OPTIQUE\20200820-SRO-10-045-251-ROP-EXCEL.xlsx`
-	testCable94Xlsx        string = ``
-	testCableOptiqueC2Xlsx string = `10_045_251_CABLE_OPTIQUE_C2.xlsx`
+	//testXLS                string = `SRO-10-50-251`
+	//testDir                string = `C:\Users\Laurent\Desktop\TEMPORAIRE\Sogetrel\Chantier Fibre Aube\`
+	//testBPEDir             string = `4.PLANS DE SOUDURE`
+	//testROPXlsx            string = `5.ROUTE OPTIQUE\20200820-SRO-10-045-251-ROP-EXCEL.xlsx`
+	//testCable94Xlsx        string = ``
+	//testCableOptiqueC2Xlsx string = `10_045_251_CABLE_OPTIQUE_C2.xlsx`
 
-	testSiteId int = 51
+	// Axians Moselle ==================================================================================================
+	testClient  string = "Axians Moselle"
+	testManager string = "David MAUSSAND"
+	//testManager string = "Matthieu BECK"
 
-	//testXLS         string = `VOL_PM09`
-	//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCCE_VOL_PM09`
-	//testBPEDir      string = `CCCE_VOL_PM09_BPE`
-	//testROPXlsx     string = `CCCE_VOL_PM09_ROP\CCCE_VOL_PM09_ROP.xlsx`
-	//testSiteId      int    = 28
-	//testCable94Xlsx string = ``
-	////
-	//testXLS         string = `VOL_PM07`
-	//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCCE_VOL_PM07`
-	//testBPEDir      string = `CCCE_VOL_PM07_BPE`
-	//testROPXlsx     string = `CCCE_VOL_PM07_ROP\CCCE_VOL_PM07_ROP.xlsx`
-	//testSiteId int = 27
-	//testCable94Xlsx string = ``
-	////
-	//testXLS         string = `VOL_PM02`
-	//testDir         string = `C:\Users\Laurent\Desktop\DOSSIERS MOSELLE\CCCE_VOL_PM02`
-	//testBPEDir      string = `CCCE_VOL_PM02_BPE`
-	//testROPXlsx     string = `CCCE_VOL_PM02_ROP\CCCE_VOL_PM02_ROP.xlsx`
-	//testSiteId int = 26
-	//testCable94Xlsx string = ``
-	////
+	testXLS                string = `SARLB_PM10`
+	testDir                string = `C:\Users\Laurent\OneDrive\Documents\TEMPORAIRE\Moselle\2020-11-25 SAR_PRO\CCAL_SAR_PM10\`
+	testBPEDir             string = `CCAL_SAR_PM10_BPE`
+	testROPXlsx            string = `CCAL_SAR_PM10_ROP\CCAL_SAR_PM10_ROP.xlsx`
+	testCable94Xlsx        string = `` // to activate Pulling Activity
+	testCableOptiqueC2Xlsx string = ``
+
+	// Common ==========================================================================================================
+	testSiteId int = 55
 )
 
 var EnableDestBPECable = map[string]string{
@@ -67,7 +50,8 @@ func main() {
 	pm.DoOtherThanEline = true
 
 	pm.DoMeasurement = true
-	pm.BlobPattern = `*/_*.xlsx` // for Sogetrel Worksite
+	// Uncomment zone BlobPattern setup for Sogetrel
+	//pm.BlobPattern = zone.Blobpattern_Sogetrel // for Sogetrel Worksite
 
 	err := pm.ParseBPEDir(filepath.Join(testDir, testBPEDir))
 	if err != nil {
@@ -121,7 +105,7 @@ func main() {
 
 	err = pm.WriteXLS(testDir, testXLS)
 	if err != nil {
-		log.Fatal("could not write XLSx :", err)
+		log.Printf("could not write XLSx : %s", err)
 	}
 
 	err = pm.WriteJSON(testDir, testXLS, testClient, testManager, testSiteId)

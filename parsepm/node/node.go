@@ -322,7 +322,12 @@ func (n *Node) getSplicedChildren() map[string]bool {
 		if strings.HasPrefix(ope, "Epissure->") {
 			dest := strings.TrimPrefix(ope, "Epissure->")
 			if dest != "" {
-				res[n.TronconsOut[dest].NodeDest.PtName] = true
+				tronconDest, found := n.TronconsOut[dest]
+				if !found {
+					fmt.Printf("Error : unable to find dest %s\n", dest)
+				} else {
+					res[tronconDest.NodeDest.PtName] = true
+				}
 			}
 		}
 	}
