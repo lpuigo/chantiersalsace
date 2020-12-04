@@ -10,30 +10,30 @@ import (
 
 const (
 	// Sogetrel Fibre ==================================================================================================
-	//testClient             string = "Sogetrel Fibre"
-	//testManager            string = "CHAUFFERT Nicolas"
+	testClient  string = "Sogetrel Fibre"
+	testManager string = "CHAUFFERT Nicolas"
 
-	//testXLS                string = `SRO-10-50-251`
-	//testDir                string = `C:\Users\Laurent\Desktop\TEMPORAIRE\Sogetrel\Chantier Fibre Aube\`
-	//testBPEDir             string = `4.PLANS DE SOUDURE`
-	//testROPXlsx            string = `5.ROUTE OPTIQUE\20200820-SRO-10-045-251-ROP-EXCEL.xlsx`
-	//testCable94Xlsx        string = ``
-	//testCableOptiqueC2Xlsx string = `10_045_251_CABLE_OPTIQUE_C2.xlsx`
-
-	// Axians Moselle ==================================================================================================
-	testClient  string = "Axians Moselle"
-	testManager string = "David MAUSSAND"
-	//testManager string = "Matthieu BECK"
-
-	testXLS                string = `SARLB_PM10`
-	testDir                string = `C:\Users\Laurent\OneDrive\Documents\TEMPORAIRE\Moselle\2020-11-25 SAR_PRO\CCAL_SAR_PM10\`
-	testBPEDir             string = `CCAL_SAR_PM10_BPE`
-	testROPXlsx            string = `CCAL_SAR_PM10_ROP\CCAL_SAR_PM10_ROP.xlsx`
-	testCable94Xlsx        string = `` // to activate Pulling Activity
+	testXLS                string = `SRO 10_018_098`
+	testDir                string = `C:\Users\Laurent\OneDrive\Documents\TEMPORAIRE\Sogetrel\Chantier Fibre Aube\2020-11-30 SRO 10_018_098\`
+	testBPEDir             string = `PLANS DE SOUDURE 10_018_098`
+	testROPXlsx            string = `20200914-SRO-10-018-098-ROP-EXCEL.xlsx`
+	testCable94Xlsx        string = ``
 	testCableOptiqueC2Xlsx string = ``
 
+	// Axians Moselle ==================================================================================================
+	//testClient  string = "Axians Moselle"
+	//testManager string = "David MAUSSAND"
+	////testManager string = "Matthieu BECK"
+	//
+	//testXLS                string = `SARLB_PM04`
+	//testDir                string = `C:\Users\Laurent\OneDrive\Documents\TEMPORAIRE\Moselle\2020-11-25 SAR_PRO\CCAL_SAR_PM04\`
+	//testBPEDir             string = `CCAL_SAR_PM04_BPE`
+	//testROPXlsx            string = `CCAL_SAR_PM04_ROP\CCAL_SAR_PM04_ROP.xlsx`
+	//testCable94Xlsx        string = `9.4.xlsx` // to activate Pulling Activity
+	//testCableOptiqueC2Xlsx string = ``
+
 	// Common ==========================================================================================================
-	testSiteId int = 55
+	testSiteId int = 57
 )
 
 var EnableDestBPECable = map[string]string{
@@ -50,14 +50,17 @@ func main() {
 	pm.DoOtherThanEline = true
 
 	pm.DoMeasurement = true
-	// Uncomment zone BlobPattern setup for Sogetrel
-	//pm.BlobPattern = zone.Blobpattern_Sogetrel // for Sogetrel Worksite
 
+	// Uncomment zone BlobPattern setup for Sogetrel
+	pm.BlobPattern = zone.Blobpattern_Sogetrel // for Sogetrel Worksite
+
+	log.Printf("Parse BPE directory\n")
 	err := pm.ParseBPEDir(filepath.Join(testDir, testBPEDir))
 	if err != nil {
 		log.Fatal("could not parse BPE Directory:", err)
 	}
 
+	log.Printf("Parse ROP file\n")
 	ropFile := filepath.Join(testDir, testROPXlsx)
 	if exists(ropFile) {
 		// If ROP File exist, parse it to create BPE Tree

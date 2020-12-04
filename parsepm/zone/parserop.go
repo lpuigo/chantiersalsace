@@ -47,7 +47,8 @@ func NewRopParser(sh *xlsx.Sheet, zone *Zone) *RopParser {
 }
 
 func (rp *RopParser) debug(msg string) {
-	log.Fatalf("pos %s : %s", xlsx.GetCellIDStringFromCoords(rp.pos.col, rp.pos.row), msg)
+	//log.Fatalf("pos %s : %s", xlsx.GetCellIDStringFromCoords(rp.pos.col, rp.pos.row), msg)
+	log.Printf("pos %s : %s", xlsx.GetCellIDStringFromCoords(rp.pos.col, rp.pos.row), msg)
 }
 
 func (rp *RopParser) GetChildRopParser() *RopParser {
