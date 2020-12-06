@@ -69,6 +69,11 @@ func (n *Node) SetLocationType() {
 	n.LocationType = "PBO"
 }
 
+// GetToBeMeasuredFiber returns number of measurement to be done on receiver node
+//
+// - for PM node : number of "Epissure" Operation
+//
+// - for BPE/PBO node : number of "Attente" Operation
 func (n *Node) GetToBeMeasuredFiber() int {
 	if n.DistFromPM == 0 {
 		return 0
@@ -80,9 +85,6 @@ func (n *Node) GetToBeMeasuredFiber() int {
 }
 
 func (n *Node) AddOperation(tronconIn, ope, fiberOut, tronconOut string) {
-	//if tronconIn != "" && n.TronconIn.Name == tronconIn {
-	//	n.TronconIn.Capa++
-	//}
 	if ope == "Love" || ope == "" {
 		return
 	}
@@ -96,6 +98,11 @@ func (n *Node) AddOperation(tronconIn, ope, fiberOut, tronconOut string) {
 		}
 	}
 	n.Operation[key]++
+}
+
+func (n *Node) AddNbOperations(ope, tronconOut string, nb int) {
+	key := strings.Title(strings.ToLower(ope)) + "->" + tronconOut
+	n.Operation[key] += nb
 }
 
 func (n *Node) AddChild(cn *Node) {
@@ -159,6 +166,7 @@ func (n *Node) String(co Troncons) string {
 	return res
 }
 
+// GetNumbers returns numbers of Epissure and Attente (or others) to be done on receiver node
 func (n *Node) GetNumbers() (nbEpi, nbOther int) {
 	for ope, _ := range n.Operation {
 		e, o := n.GetOperationNumbers(ope)
@@ -294,6 +302,9 @@ func (n *Node) GetOperationCapa(ope string) string {
 	return n.TronconsOut[cname].CapaString()
 }
 
+// SetOperationFromChildren defines reciever node Operations (Epissure) based on children's TroconIn capacity
+//
+// applicable on PM or SRO Node only
 func (n *Node) SetOperationFromChildren() {
 	for _, cn := range n.Children {
 		n.TronconIn.Capa += cn.TronconIn.Capa
@@ -302,6 +313,7 @@ func (n *Node) SetOperationFromChildren() {
 	}
 }
 
+// SetSplicePTs sets SplicePT on receiver node and its children
 func (n *Node) SetSplicePTs(splicePT ...string) {
 	if n.GetToBeMeasuredFiber() > 0 {
 		n.SplicePT = splicePT

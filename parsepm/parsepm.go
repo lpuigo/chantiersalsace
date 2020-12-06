@@ -13,12 +13,13 @@ const (
 	testClient  string = "Sogetrel Fibre"
 	testManager string = "CHAUFFERT Nicolas"
 
-	testXLS                string = `SRO 10_018_098`
-	testDir                string = `C:\Users\Laurent\OneDrive\Documents\TEMPORAIRE\Sogetrel\Chantier Fibre Aube\2020-11-30 SRO 10_018_098\`
-	testBPEDir             string = `PLANS DE SOUDURE 10_018_098`
-	testROPXlsx            string = `20200914-SRO-10-018-098-ROP-EXCEL.xlsx`
+	testXLS                string = `SRO 10-050-279`
+	testDir                string = `C:\Users\Laurent\OneDrive\Documents\TEMPORAIRE\Sogetrel\Chantier Fibre Aube\2020-11-27 SRO 10_050_279\`
+	testBPEDir             string = `PLANS DE SOUDURE 10_050_279`
+	testROPXlsx            string = `20200923-SRO-10-050-279-ROP-EXCEL.xlsx`
 	testCable94Xlsx        string = ``
-	testCableOptiqueC2Xlsx string = ``
+	testCableOptiqueC2Xlsx string = `10_050_279_CABLE_OPTIQUE_D2.xlsx`
+	testBoiteOptiqueD2Xlsx string = `10_050_279_BOITE_OPTIQUE_D2.xlsx`
 
 	// Axians Moselle ==================================================================================================
 	//testClient  string = "Axians Moselle"
@@ -31,9 +32,10 @@ const (
 	//testROPXlsx            string = `CCAL_SAR_PM04_ROP\CCAL_SAR_PM04_ROP.xlsx`
 	//testCable94Xlsx        string = `9.4.xlsx` // to activate Pulling Activity
 	//testCableOptiqueC2Xlsx string = ``
+	//testBoiteOptiqueD2Xlsx string = ``
 
 	// Common ==========================================================================================================
-	testSiteId int = 57
+	testSiteId int = 58
 )
 
 var EnableDestBPECable = map[string]string{
@@ -95,7 +97,18 @@ func main() {
 		}
 		err = pm.ParseQuantiteCableOptiqueC2Xlsx(cableC2File)
 		if err != nil {
-			log.Fatal("could not parse Quantité Cable Optique C2 file:", err)
+			log.Fatal("could not parse Quantité Cable Optique D2 file:", err)
+		}
+	}
+
+	if testBoiteOptiqueD2Xlsx != "" {
+		boFile := filepath.Join(testDir, testBoiteOptiqueD2Xlsx)
+		if !exists(boFile) {
+			log.Fatal("Boite Optique file '%s' does not exist\n", boFile)
+		}
+		err = pm.ParseQuantiteBoiteOptiqueD2Xlsx(boFile)
+		if err != nil {
+			log.Fatal("could not parse Quantité Boite Optique D2 file:", err)
 		}
 	}
 

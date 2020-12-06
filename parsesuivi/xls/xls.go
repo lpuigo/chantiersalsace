@@ -11,5 +11,6 @@ func RcToAxis(row, col int) string {
 		res = "A1"
 	}
 	return res
-	return excelize.ToAlphaString(col) + strconv.Itoa(row+1)
+	colName, _ := excelize.ColumnNumberToName(col)
+	return colName + strconv.Itoa(row+1)
 }

@@ -3,37 +3,42 @@ package zone
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/lpuig/ewin/chantiersalsace/parsepm/node"
 	"github.com/lpuig/ewin/doe/website/backend/model/date"
 	"github.com/lpuig/ewin/doe/website/backend/model/ripsites"
 	"github.com/lpuig/ewin/doe/website/frontend/model/ripsite/ripconst"
 	"github.com/tealeg/xlsx"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 type Zone struct {
-	Nodes            node.Nodes
-	Troncons         node.Troncons
-	Cables           node.Cables
-	Sro              *node.Node
-	NodeRoots        []*node.Node
-	DoPulling        bool
-	DoJunctions      bool
-	DoEline          bool
-	DoOtherThanEline bool
-	DoMeasurement    bool
-	BlobPattern      string
+	Nodes               node.Nodes
+	Troncons            node.Troncons
+	Cables              node.Cables
+	Sro                 *node.Node
+	NodeRoots           []*node.Node
+	DoPulling           bool
+	DoJunctions         bool
+	DoEline             bool
+	DoOtherThanEline    bool
+	DoMeasurement       bool
+	CreateNodeFromRop   bool
+	DefineNodeOperation map[string]bool
+	BlobPattern         string
 }
 
 func New() *Zone {
 	z := &Zone{
-		Nodes:       node.NewNodes(),
-		Troncons:    node.NewTroncons(),
-		NodeRoots:   []*node.Node{},
-		Sro:         node.NewNode(),
-		BlobPattern: blobpattern_EasyFibre,
+		Nodes:               node.NewNodes(),
+		Troncons:            node.NewTroncons(),
+		NodeRoots:           []*node.Node{},
+		Sro:                 node.NewNode(),
+		CreateNodeFromRop:   true,
+		DefineNodeOperation: make(map[string]bool),
+		BlobPattern:         blobpattern_EasyFibre,
 	}
 	z.Sro.Name = "SRO"
 	z.Sro.PtName = "SRO"
@@ -273,7 +278,8 @@ func (z *Zone) ParseQuantiteCableXLS(file string) error {
 		}
 		tr := z.Troncons[trName]
 		if tr == nil {
-			return fmt.Errorf("unknown Troncon '%s' found on line %d", trName, row+1)
+			fmt.Printf("skip unknown Troncon '%s' found on line %d", trName, row+1)
+			continue
 		}
 		tr.CableType = sheet.Cell(row, colQCCableType).Value
 		tr.LoveLength, err = sheet.Cell(row, colQCLoveLength).Int()
@@ -310,11 +316,11 @@ func (z *Zone) ParseQuantiteCableXLS(file string) error {
 
 const (
 	rowQC2Start       int = 1
-	colQC2Orig        int = 0
-	colQC2Dest        int = 1
-	colQC2PullingType int = 2
-	colQC2Length      int = 3
-	colQC2Capa        int = 4
+	colQC2PullingType int = 1
+	colQC2Length      int = 2
+	colQC2Capa        int = 3
+	colQC2Orig        int = 4
+	colQC2Dest        int = 5
 )
 
 func (z *Zone) ParseQuantiteCableOptiqueC2Xlsx(file string) error {
@@ -325,7 +331,7 @@ func (z *Zone) ParseQuantiteCableOptiqueC2Xlsx(file string) error {
 	}
 	sheet := xls.Sheets[0]
 	if sheet.Cell(rowQC2Start-1, colQC2Orig).Value != "ORIGINE" {
-		return fmt.Errorf("could not find 'ORIGINE' label on line %d, col %d", rowQC2Start, colQC2Orig+1)
+		return fmt.Errorf("could not find 'ORIGINE' label on cell '%s'", xlsx.GetCellIDStringFromCoords(colQC2Orig, rowQC2Start))
 	}
 
 	type c2Data struct {
@@ -371,7 +377,11 @@ func (z *Zone) ParseQuantiteCableOptiqueC2Xlsx(file string) error {
 		}
 		tr.LoveLength = 0
 		if tr.Capa != c2.capa {
-			fmt.Printf("\t%s has unexpected capacity %d vs %d\n", tr.Name, c2.capa, tr.Capa)
+			if z.CreateNodeFromRop {
+				tr.Capa = c2.capa
+			} else {
+				fmt.Printf("\t%s has unexpected capacity %d vs %d\n", tr.Name, c2.capa, tr.Capa)
+			}
 		}
 		tr.CableType = fmt.Sprintf("CABLE_%dFO", tr.Capa)
 		tirageType := c2.pullingType
@@ -385,6 +395,71 @@ func (z *Zone) ParseQuantiteCableOptiqueC2Xlsx(file string) error {
 			tr.UndergroundLength += pullingLength
 		default:
 			fmt.Printf("\t%s has unknown pulling type '%s'\n", tr.Name, tirageType)
+		}
+	}
+	return nil
+}
+
+const (
+	rowQBOStart     int = 1
+	colQBOName      int = 0
+	colQBOReference int = 1
+	colQBOType      int = 2
+	colQBOFunction  int = 5
+)
+
+func (z *Zone) ParseQuantiteBoiteOptiqueD2Xlsx(file string) error {
+	baseFile := filepath.Base(file)
+	xlsFile, err := xlsx.OpenFile(file)
+	if err != nil {
+		return err
+	}
+	sheet := xlsFile.Sheets[0]
+	if sheet.Cell(rowQBOStart-1, colQBOName).Value != "NOM" {
+		return fmt.Errorf("could not find 'NOM' label on cell '%s'", xlsx.GetCellIDStringFromCoords(colQBOName, rowQBOStart-1))
+	}
+
+	type boData struct {
+		name     string
+		ref      string
+		boxType  string
+		function string
+	}
+
+	boDataDict := make(map[string]boData)
+
+	for row := rowQBOStart; row < sheet.MaxRow; row++ {
+		c := boData{
+			name:     sheet.Cell(row, colQBOName).Value,
+			ref:      sheet.Cell(row, colQBOReference).Value,
+			boxType:  sheet.Cell(row, colQBOType).Value,
+			function: sheet.Cell(row, colQBOFunction).Value,
+		}
+		boDataDict[c.name] = c
+	}
+
+	for _, node := range z.Nodes {
+		bo, found := boDataDict[node.PtName]
+		if !found {
+			fmt.Printf("\t%s node is not declared in XLSx file '%s'. Skipping\n", node.PtName, baseFile)
+			continue
+		}
+		if node.BPEType != bo.ref {
+			if z.CreateNodeFromRop {
+				node.BPEType = bo.ref
+			} else {
+				fmt.Printf("\t%s has unexpected box model '%s' instead of '%s'\n", node.PtName, node.BPEType, bo.ref)
+			}
+		}
+		if bo.function != "PBO" {
+			bo.function = "BPE"
+		}
+		if node.LocationType != bo.function {
+			if z.CreateNodeFromRop {
+				node.LocationType = bo.function
+			} else {
+				fmt.Printf("\t%s has unexpected usage '%s' instead of '%s'\n", node.PtName, node.LocationType, bo.function)
+			}
 		}
 	}
 	return nil
