@@ -20,9 +20,11 @@ func (p Pos) Right(offset int) Pos {
 }
 
 type RopParser struct {
-	sheet *xlsx.Sheet
-	zone  *Zone
-	pos   Pos
+	sheet          *xlsx.Sheet
+	zone           *Zone
+	pos            Pos
+	serviceCol     int
+	CountReserveOR bool
 }
 
 const (
@@ -78,6 +80,25 @@ func (rp *RopParser) GetPosInt(row, col int) int {
 
 func (rp *RopParser) GetValue(colOffset int) string {
 	return rp.sheet.Cell(rp.pos.row, rp.pos.col+colOffset).Value
+}
+
+func (rp *RopParser) FindServiceColumn() bool {
+	colNum := acolFirstChild
+	for rp.GetPosValue(0, colNum) == "T" {
+		colNum += colNextBlock
+	}
+	rp.serviceCol = colNum + 2
+	return rp.GetPosValue(0, rp.serviceCol) == "SERVICE"
+}
+
+func (rp *RopParser) IsCurrentRouteForClient() bool {
+	serviceValue := strings.ToLower(strings.Trim(rp.GetPosValue(rp.pos.row, rp.serviceCol), " "))
+	// return forClient || forReserve
+	forClient := strings.HasPrefix(serviceValue, "client ftth")
+	if rp.CountReserveOR && !forClient {
+		return strings.HasPrefix(serviceValue, "reserve")
+	}
+	return forClient
 }
 
 // GetParentPtName return parent PT (or PM) name
@@ -147,6 +168,11 @@ func (rp *RopParser) SetNodeInfo(n *node.Node) {
 }
 
 func (rp *RopParser) ParseRop() {
+	// check for Service column
+	if !rp.FindServiceColumn() {
+		rp.pos = Pos{0, rp.serviceCol}
+		rp.debug("could not find service column")
+	}
 	rp.pos = Pos{1, acolFirstChild}
 	// Init root PM Node
 	rp.zone.Sro.PtName = rp.GetPosValue(rp.pos.row, acolPmName)
@@ -207,7 +233,7 @@ func (rp *RopParser) Parse() *node.Node {
 		}
 	}
 	rp.SetNodeInfo(currentNode)
-	if rp.zone.CreateNodeFromRop && !rp.zone.DefineNodeOperation[ptName]{
+	if rp.zone.CreateNodeFromRop && !rp.zone.DefineNodeOperation[ptName] {
 		// Operation are to be defined from Rop data
 		// reset Operation
 		currentNode.Operation = make(map[string]int)
@@ -251,7 +277,11 @@ func (rp *RopParser) Parse() *node.Node {
 						currentNode.TronconIn.Capa++
 					}
 				} else if rp.zone.CreateNodeFromRop {
-					currentNode.AddOperation("", "ATTENTE", "", "")
+					// check if current Opt. Route is to bu used
+					if rp.IsCurrentRouteForClient() {
+						currentNode.AddOperation("", "ATTENTE", "", "")
+					}
+					// else its operation = love => No Op.
 				}
 
 			case "EPISSURE":

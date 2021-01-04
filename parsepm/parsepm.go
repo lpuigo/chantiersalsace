@@ -11,15 +11,17 @@ import (
 const (
 	// Sogetrel Fibre ==================================================================================================
 	testClient  string = "Sogetrel Fibre"
-	testManager string = "CHAUFFERT Nicolas"
+	testManager string = "DEPLANQUE Yves"
 
-	testXLS                string = `SRO 10-050-279`
-	testDir                string = `C:\Users\Laurent\OneDrive\Documents\TEMPORAIRE\Sogetrel\Chantier Fibre Aube\2020-11-27 SRO 10_050_279\`
-	testBPEDir             string = `PLANS DE SOUDURE 10_050_279`
-	testROPXlsx            string = `20200923-SRO-10-050-279-ROP-EXCEL.xlsx`
+	testXLS                string = `SRO-10-002-013`
+	testDir                string = `C:\Users\Laurent\OneDrive\Documents\TEMPORAIRE\Sogetrel\Chantier Fibre Aube\2021-01-04 SRO 10_\5. PM 10_002_013 Racco EWIN\`
+	testBPEDir             string = `4.PLANS DE SOUDURE`
+	testROPXlsx            string = `5.ROUTE OPTIQUE\20201126-SRO-10-002-013-ROP-EXCEL.xlsx`
 	testCable94Xlsx        string = ``
-	testCableOptiqueC2Xlsx string = `10_050_279_CABLE_OPTIQUE_D2.xlsx`
-	testBoiteOptiqueD2Xlsx string = `10_050_279_BOITE_OPTIQUE_D2.xlsx`
+	testCableOptiqueC2Xlsx string = ``
+	testBoiteOptiqueD2Xlsx string = ``
+	//testCableOptiqueC2Xlsx string = `10_050_279_CABLE_OPTIQUE_D2.xlsx`
+	//testBoiteOptiqueD2Xlsx string = `10_050_279_BOITE_OPTIQUE_D2.xlsx`
 
 	// Axians Moselle ==================================================================================================
 	//testClient  string = "Axians Moselle"
@@ -35,7 +37,7 @@ const (
 	//testBoiteOptiqueD2Xlsx string = ``
 
 	// Common ==========================================================================================================
-	testSiteId int = 58
+	testSiteId int = 60
 )
 
 var EnableDestBPECable = map[string]string{
@@ -45,7 +47,7 @@ var EnableDestBPECable = map[string]string{
 func main() {
 	pm := zone.New()
 	// configure activity
-	pm.DoPulling = true
+	pm.DoPulling = false
 
 	pm.DoJunctions = true
 	pm.DoEline = true
