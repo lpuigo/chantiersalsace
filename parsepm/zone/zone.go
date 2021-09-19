@@ -75,7 +75,7 @@ func (z *Zone) ParseBPEDir(dir string) error {
 		if err != nil {
 			return fmt.Errorf("parsing '%s' returned error : %s\n", filepath.Base(f), err.Error())
 		}
-		fmt.Printf("'%s' parsed\n", n.PtName)
+		fmt.Printf("'%s' parsed from %s\n", n.PtName, f)
 		newNode := z.Nodes.Add(n)
 		if !newNode {
 			return fmt.Errorf("node %s was already defined", n.PtName)
@@ -673,6 +673,7 @@ func (z *Zone) CheckConsistency() {
 	for _, node := range z.Nodes {
 		if node.BPEType == "" {
 			node.BPEType = "ELINE"
+			node.LocationType = "PBO"
 		}
 	}
 }
