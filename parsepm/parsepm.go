@@ -11,12 +11,12 @@ import (
 const (
 	// Sogetrel Fibre ==================================================================================================
 	testClient  string = "Sogetrel Fibre"
-	testManager string = "DEPLANQUE Yves"
+	testManager string = "WOIRGARD Pierre"
 
-	testXLS                string = `SRO-10-002-013`
-	testDir                string = `C:\Users\Laurent\OneDrive\Documents\TEMPORAIRE\Sogetrel\Chantier Fibre Aube\2021-01-04 SRO 10_\5. PM 10_002_013 Racco EWIN\`
+	testXLS                string = `SRO 52-001-128`
+	testDir                string = `C:\Users\Laurent\OneDrive\Documents\EWIN Partages\Sogetrel\Chantier Fibre Aube\2022-03-24 SRO\`
 	testBPEDir             string = `4.PLANS DE SOUDURE`
-	testROPXlsx            string = `5.ROUTE OPTIQUE\20201126-SRO-10-002-013-ROP-EXCEL.xlsx`
+	testROPXlsx            string = `20210818-SRO-52-01-128-ROP-EXCEL.xlsx`
 	testCable94Xlsx        string = ``
 	testCableOptiqueC2Xlsx string = ``
 	testBoiteOptiqueD2Xlsx string = ``
@@ -37,7 +37,7 @@ const (
 	//testBoiteOptiqueD2Xlsx string = ``
 
 	// Common ==========================================================================================================
-	testSiteId int = 60
+	testSiteId int = 86
 )
 
 var EnableDestBPECable = map[string]string{

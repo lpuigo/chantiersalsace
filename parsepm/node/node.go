@@ -244,6 +244,9 @@ func (n *Node) ParseBPEXLS(file string, troncons Troncons) error {
 				return fmt.Errorf("could not parse Troncon Capa Info line %d : %s", row+1, err.Error())
 			}
 			nt.Capa = int(nbFo)
+			if n.TronconIn == nil {
+				return fmt.Errorf("Node has no TronconIn")
+			}
 			if infos[1] != n.TronconIn.Name {
 				n.TronconsOut[infos[1]] = nt
 			}
